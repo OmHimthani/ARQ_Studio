@@ -92,6 +92,9 @@ Developed as part of a Data Communication laboratory assignment on Data Link Lay
 ## Author
 
 **Om Himthani**
+**Parth Gautam**
+**Leisha Desai**
+**Prince Jain**
 
 GitHub: [@OmHimthani](https://github.com/OmHimthani)
 
