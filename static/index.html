@@ -1,0 +1,266 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ARQ Studio — Reliable Transmission Visualizer</title>
+<style>
+:root{--bg:#0a0f1e;--s1:#121a30;--s2:#18223d;--bd:#26324f;--tx:#e8edf8;--mu:#8d99b6;--ac:#5ab0ff;--ok:#4fe0ad;--bad:#ff6b7d;--buf:#f6b94c;--rx:#c597ff;--dis:#6f7a96;--sh:0 8px 28px #0006;--r:12px;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+[data-theme=light]{--bg:#f3f0e8;--s1:#fffdf8;--s2:#f7f3ea;--bd:#ddd5c4;--tx:#1b2133;--mu:#667086;--ac:#1c6dd0;--ok:#0f8f5c;--bad:#d4263c;--buf:#b4700b;--rx:#7840cf;--dis:#8b8f9c;--sh:0 6px 20px #4a3f2a22}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 var(--sans)}
+header{display:flex;align-items:center;gap:16px;padding:10px 20px;border-bottom:1px solid var(--bd);background:var(--s1);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}.brand small{display:block;font-weight:400;color:var(--mu);font-size:11px}
+nav{display:flex;gap:4px;flex:1;flex-wrap:wrap}nav button{background:none;border:0;color:var(--mu);padding:7px 12px;border-radius:8px;cursor:pointer;font:inherit}
+nav button[aria-current=page]{background:var(--s2);color:var(--tx);box-shadow:inset 0 -2px var(--ac)}
+button,input,textarea{font:inherit;color:var(--tx)}:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.chip{font:600 11px var(--mono);padding:3px 9px;border-radius:99px;border:1px solid var(--bd);background:var(--s2);color:var(--mu)}
+.chip.run{color:var(--ac);border-color:var(--ac)}.chip.done{color:var(--ok);border-color:var(--ok)}.chip.bad{color:var(--bad);border-color:var(--bad)}
+.btn{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:6px 12px;cursor:pointer}.btn:hover:not(:disabled){border-color:var(--ac)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.pri{background:var(--ac);color:#06101f;border-color:var(--ac);font-weight:700}
+main{max-width:1500px;margin:0 auto;padding:16px 20px}section.page{display:none}section.page.on{display:block}
+.grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:16px}@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-bottom:14px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--mu);margin:0 0 10px}h3{margin:.2em 0}
+.protos{display:grid;gap:8px}.proto{text-align:left;background:var(--s2);border:1px solid var(--bd);border-left:4px solid var(--bd);border-radius:10px;padding:9px 11px;cursor:pointer}
+.proto b{display:block}.proto span{color:var(--mu);font-size:12px}.proto[aria-pressed=true]{border-color:var(--ac);border-left-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,var(--s2))}
+.proto[data-p=sw]{border-left-color:var(--buf)}.proto[data-p=gbn]{border-left-color:var(--rx)}.proto[data-p=sr]{border-left-color:var(--ok)}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}label{display:block;font-size:12px;color:var(--mu)}
+input,textarea{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;margin-top:2px;font-family:var(--mono)}input:disabled{opacity:.55}
+.hint{font-size:11px;color:var(--mu);margin-top:2px}.err{color:var(--bad);font-size:12px;margin:3px 0}.warn{color:var(--buf);font-size:12px;margin:3px 0}
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin:6px 0;max-height:96px;overflow:auto}.lc{font:11px var(--mono);padding:2px 6px;border-radius:6px;border:1px solid var(--bd);background:var(--s2);cursor:pointer}
+.lc[aria-pressed=true]{background:var(--bad);color:#fff;border-color:var(--bad)}.lc[aria-pressed=true]::before{content:"✕ "}
+.tool{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.tool .sp{flex:1}
+#net{width:100%;height:auto;display:block}#net text{font-family:var(--mono);fill:var(--tx)}
+.strip{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 10px}.cell{width:40px;border:1.5px solid var(--bd);border-radius:7px;text-align:center;font:600 11px var(--mono);padding:2px 0 0;background:var(--s2);position:relative;overflow:hidden}
+.cell i{display:block;font:normal 9px var(--mono);color:var(--mu)}.cell .tm{position:absolute;left:0;bottom:0;height:3px;background:var(--buf)}
+.cell.win{box-shadow:0 0 0 2px var(--ac)}.cell.blocked{opacity:.4;border-style:dashed}.cell.acked,.cell.delivered{border-color:var(--ok);color:var(--ok)}
+.cell.out{border-color:var(--ac)}.cell.tmo{border-color:var(--bad);color:var(--bad)}.cell.buffered{border-color:var(--buf);color:var(--buf)}.cell.hl{outline:2px solid var(--rx);outline-offset:1px}
+.cell.acked::after,.cell.delivered::after{content:"✓";position:absolute;right:2px;top:0;font-size:9px}.cell.tmo::after{content:"⏱";position:absolute;right:1px;top:0;font-size:9px}.cell.buffered::after{content:"▤";position:absolute;right:2px;top:0;font-size:9px}
+.cell sup{color:var(--dis);font-size:8px;position:absolute;left:2px;top:0}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--mu)}
+.bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}input[type=range]{width:120px}
+.tl{position:relative;max-height:300px;overflow:auto;font:12px var(--mono);border:1px solid var(--bd);border-radius:8px}.ev{padding:3px 8px;cursor:pointer;border-left:3px solid transparent;border-bottom:1px solid var(--bd);white-space:pre-wrap}
+.ev.cur{background:color-mix(in srgb,var(--ac) 16%,transparent);border-left-color:var(--ac)}.ev.fut{opacity:.45}.ev.loss{color:var(--bad)}.ev.tmo{color:var(--buf)}.ev .a{color:var(--mu)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}.m{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:8px 10px}.m b{display:block;font:700 20px var(--mono)}.m span{font-size:11px;color:var(--mu)}
+.prog{height:8px;background:var(--s2);border-radius:9px;overflow:hidden;margin:8px 0}.prog div{height:100%;background:var(--ok)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left}th{color:var(--mu);font-weight:600}td.n{font-family:var(--mono)}
+.hb{display:flex;align-items:center;gap:6px;font:11px var(--mono)}.hb i{display:block;height:9px;background:var(--ac);border-radius:4px}
+.banner{padding:9px 12px;border-radius:9px;margin:8px 0;border:1px solid var(--bad);color:var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent)}.banner.u{border-color:var(--buf);color:var(--buf);background:color-mix(in srgb,var(--buf) 10%,transparent)}
+details{margin:6px 0}summary{cursor:pointer;color:var(--ac)}.sc{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.rc{margin:3px 3px 0 0;font:11px var(--mono);padding:3px 8px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+body{background:radial-gradient(900px 500px at 8% -10%,color-mix(in srgb,var(--ac) 22%,transparent),transparent 60%),radial-gradient(800px 500px at 100% 0%,color-mix(in srgb,var(--rx) 18%,transparent),transparent 60%),radial-gradient(700px 500px at 50% 110%,color-mix(in srgb,var(--ok) 14%,transparent),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(var(--bd) 1px,transparent 1px),linear-gradient(90deg,var(--bd) 1px,transparent 1px);background-size:44px 44px;opacity:.18;mask-image:radial-gradient(ellipse at 50% 0%,#000 20%,transparent 75%);-webkit-mask-image:radial-gradient(ellipse at 50% 0%,#000 20%,transparent 75%)}
+main,header{position:relative}header{background:color-mix(in srgb,var(--s1) 78%,transparent);backdrop-filter:blur(14px) saturate(1.3)}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--ac),var(--rx),var(--ok),transparent);opacity:.8}
+.brand b{background:linear-gradient(90deg,var(--ac),var(--rx),var(--ok));-webkit-background-clip:text;background-clip:text;color:transparent;font-size:17px}
+.card{background:linear-gradient(160deg,color-mix(in srgb,var(--s1) 88%,transparent),color-mix(in srgb,var(--s2) 70%,transparent));backdrop-filter:blur(12px);transition:border-color .3s,box-shadow .3s,transform .3s}
+.card:hover{border-color:color-mix(in srgb,var(--ac) 45%,var(--bd))}
+.card>h2:first-child::before,.bar>h2:first-child::before{content:"";display:inline-block;width:6px;height:6px;border-radius:2px;background:linear-gradient(135deg,var(--ac),var(--ok));margin-right:8px;vertical-align:middle;box-shadow:0 0 8px var(--ac)}
+.btn{transition:transform .15s,border-color .2s,box-shadow .2s}.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 14px color-mix(in srgb,var(--ac) 30%,transparent)}
+.btn.pri{background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 55%,var(--rx)));box-shadow:0 4px 18px color-mix(in srgb,var(--ac) 40%,transparent)}
+.proto{transition:transform .2s,box-shadow .2s,background .2s}.proto:hover{transform:translateX(3px)}.proto[aria-pressed=true]{box-shadow:0 0 0 1px var(--ac),0 6px 22px color-mix(in srgb,var(--ac) 28%,transparent)}
+.chip.run{animation:pulse 1.4s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--ac) 0%,transparent),0 0 12px var(--ac)}}
+#net{filter:drop-shadow(0 6px 24px color-mix(in srgb,var(--ac) 14%,transparent))}
+.lane{stroke-dasharray:3 9;stroke-linecap:round}.playing .lane{animation:flow 1s linear infinite}.playing .lane.r{animation-direction:reverse}@keyframes flow{to{stroke-dashoffset:-24}}
+.nodering{animation:nr 2.4s ease-in-out infinite}@keyframes nr{50%{opacity:.35}}
+.prog2{height:4px;border-radius:9px;background:var(--s2);overflow:hidden;margin:2px 0 6px}.prog2 div{height:100%;width:0;background:linear-gradient(90deg,var(--ac),var(--rx),var(--ok));box-shadow:0 0 10px var(--ac)}
+.cell{transition:border-color .25s,transform .2s,box-shadow .25s,background .25s}.cell:hover{transform:translateY(-2px)}.cell.pop{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}@keyframes pop{0%{transform:scale(.7)}100%{transform:scale(1)}}
+.cell.acked,.cell.delivered{background:color-mix(in srgb,var(--ok) 12%,var(--s2))}.cell.buffered{background:color-mix(in srgb,var(--buf) 14%,var(--s2))}.cell.tmo{background:color-mix(in srgb,var(--bad) 13%,var(--s2))}
+.m{transition:transform .2s,border-color .2s}.m:hover{transform:translateY(-3px);border-color:var(--ac)}.m b{background:linear-gradient(135deg,var(--tx),var(--ac));-webkit-background-clip:text;background-clip:text;color:transparent}
+#res.win-ok{animation:ok 2.2s ease-out 1}@keyframes ok{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 70%,transparent)}60%{box-shadow:0 0 38px 6px color-mix(in srgb,var(--ok) 45%,transparent)}100%{box-shadow:var(--sh)}}
+.ev{transition:background .2s}.ev:hover{background:color-mix(in srgb,var(--ac) 8%,transparent)}
+@media(prefers-reduced-motion:reduce){.lane,.chip.run,.nodering,.cell.pop,#res.win-ok{animation:none!important}}
+</style></head><body>
+<header><div class="brand"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="2" y="9" width="8" height="16" rx="2" fill="none" stroke="var(--ac)" stroke-width="2"/><rect x="24" y="9" width="8" height="16" rx="2" fill="none" stroke="var(--ok)" stroke-width="2"/><path d="M12 14h10m0 0-3-3m3 3-3 3M22 21H12m0 0 3-3m-3 3 3 3" stroke="var(--tx)" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg><div><b>ARQ Studio</b><small>Reliable Transmission Visualizer</small></div></div>
+<nav id="nav"></nav><span class="chip" id="status" role="status" aria-live="polite">Idle</span><button class="btn" id="theme" aria-label="Toggle light or dark theme">◐ Theme</button></header>
+<main>
+<section class="page on" id="p-sim"><div class="grid"><div>
+<div class="card"><h2>Describe a scenario (optional)</h2><textarea id="nl" rows="3" placeholder="Simulate Go-Back-N with 10 frames, 3 sequence bits, sender window 4, frame 3 and 7 lost, and ACK 5 lost."></textarea>
+<div class="tool" style="margin-top:6px"><button class="btn" id="nlGo">Interpret</button><span class="hint">Local rule-based parser; it only fills the form below.</span></div><div id="nlOut"></div></div>
+<div class="card"><h2>Protocol</h2><div class="protos" id="protos"></div></div>
+<div class="card"><h2>Parameters</h2><div class="f2">
+<label>Total frames<input id="frames" type="number" min="1"></label><label>Sequence bits (m)<input id="bits" type="number" min="1" max="16"></label>
+<label>Sender window Ws<input id="ws" type="number" min="1"></label><label>Receiver window Wr<input id="wr" type="number" min="1"></label>
+<label>Frame time Tf<input id="tf" type="number" step="any"></label><label>Propagation Tp<input id="tp" type="number" step="any"></label>
+<label style="grid-column:span 2">Timeout<input id="timeout" type="number" step="any"></label></div>
+<div class="hint" id="derived"></div><div class="hint" id="winHelp"></div><div id="errs"></div></div>
+<div class="card"><h2>Channel errors (absolute frame numbers, 0-based)</h2>
+<label>Lost data frames<input id="lf" placeholder="e.g. 3, 7"></label><div class="chips" id="lfc" aria-label="Pick lost data frames"></div>
+<label>Lost ACKs<input id="la" placeholder="e.g. 5"></label><div class="chips" id="lac" aria-label="Pick lost ACKs"></div>
+<div class="hint">Each loss hits the first transmission only. Frame 8 with m=3 has wire seq 0 but is not frame 0.</div>
+<div class="tool" style="margin-top:8px"><button class="btn" id="clr">Clear losses</button><button class="btn" id="rst">Reset configuration</button><span class="sp"></span><button class="btn pri" id="run">▶ Run simulation</button></div></div>
+</div><div>
+<div id="banner"></div>
+<div class="card"><div class="bar"><h2 style="margin:0;flex:1" id="clock">Simulated time t = 0.00</h2><span class="legend"><span style="color:var(--ac)">▬ frame</span><span style="color:var(--rx)">↻ retransmission</span><span style="color:var(--ok)">◂ ACK</span><span style="color:var(--bad)">✕ lost</span><span style="color:var(--buf)">▤ buffered</span><span>⏱ timer</span></span></div>
+<div class="prog2" aria-hidden="true"><div id="pb"></div></div><svg id="net" viewBox="0 0 900 250" role="img" aria-label="Sender, channel and receiver diagram"></svg>
+<div class="bar" role="toolbar" aria-label="Playback">
+<button class="btn" id="b-start" title="Restart">⏮</button><button class="btn" id="b-pi" title="Previous important event">⇤</button><button class="btn" id="b-back" title="Step back (←)">◂</button>
+<button class="btn pri" id="b-play" title="Play / pause (Space)">▶ Play</button><button class="btn" id="b-fwd" title="Step forward (→)">▸</button><button class="btn" id="b-ni" title="Next important event">⇥</button>
+<label style="display:flex;gap:6px;align-items:center;margin:0">Speed<input type="range" id="spd" min="0" max="4" value="1" aria-label="Playback speed"><b id="spdv" style="color:var(--tx)">1×</b></label><span class="hint" id="pos"></span></div></div>
+<div class="card"><h2>Sender — window &amp; frame states</h2><div class="strip" id="sst"></div><h2>Receiver — window &amp; delivery</h2><div class="strip" id="rst2"></div><div class="hint" id="why"></div></div>
+<div class="card"><div class="bar"><h2 style="margin:0;flex:1">Event timeline</h2><span id="flt" class="bar"></span></div><div class="tl" id="tl" tabindex="0" aria-label="Event timeline"></div>
+<details open><summary>Why did this happen?</summary><div id="explain" class="hint">Select or step to an event.</div></details></div>
+<div class="card" id="res"></div></div></div></section>
+<section class="page" id="p-cmp"><div class="card"><h2>Compare protocols under identical channel conditions</h2><p class="hint">Uses the frames, bits, timing and losses from the Simulator form. Ws applies to GBN and SR (SR Wr = Ws); Stop-and-Wait is always 1/1. A protocol whose legal limit is exceeded is rejected, not silently changed.</p>
+<div class="tool"><button class="btn pri" id="cmpGo">Run all three</button><button class="btn" id="cmpTbl">Download table (.md)</button></div><div id="cmpOut"></div></div></section>
+<section class="page" id="p-learn"><div class="card"><h2>Learn</h2><div class="sc" id="learn"></div></div></section>
+<section class="page" id="p-scn"><div class="card"><h2>Assignment test scenarios — generated from run_tests.py, executed by the real engine</h2><div class="sc" id="scn">Loading…</div></div></section>
+<section class="page" id="p-about"><div class="card" id="about"></div></section>
+</main>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const RM=matchMedia('(prefers-reduced-motion:reduce)').matches,SPD=[.5,1,2,4,8],RATE=1.6;
+const PR={sw:{n:'Stop-and-Wait',d:'Window 1/1 · individual ACKs · one frame in flight'},gbn:{n:'Go-Back-N',d:'Window Ws, receiver 1 · cumulative ACKs · resend from oldest unACKed'},sr:{n:'Selective Repeat',d:'Windows Ws/Wr · individual ACKs · buffers out-of-order · resends only timed-out frames'}};
+const DEF={protocol:'gbn',frames:10,bits:3,ws:4,wr:1,tf:1,tp:2,timeout:6,lost_frames:'3, 7',lost_acks:'5'};
+const S={run:null,fl:[],idx:-1,T:0,play:false,spd:1,unsafe:false,sel:new Set(),cur:null,filt:new Set()};
+/* ---------- theme / nav ---------- */
+const th=localStorage.getItem('arq-theme')||(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');document.documentElement.dataset.theme=th;
+$('#theme').onclick=()=>{const t=document.documentElement.dataset.theme=='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('arq-theme',t)};
+const PAGES=[['sim','Simulator'],['cmp','Compare Protocols'],['learn','Learn'],['scn','Test Scenarios'],['about','About']];
+$('#nav').innerHTML=PAGES.map(([k,v])=>`<button data-k="${k}">${v}</button>`).join('');
+function go(k){$$('.page').forEach(p=>p.classList.toggle('on',p.id=='p-'+k));$$('#nav button').forEach(b=>b.toggleAttribute('aria-current',b.dataset.k==k)||(b.dataset.k==k?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')));if(k!='sim')pause()}
+$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.k));go('sim');
+/* ---------- form ---------- */
+$('#protos').innerHTML=Object.entries(PR).map(([k,v])=>`<button class="proto" data-p="${k}" aria-pressed="false"><b>${v.n}</b><span>${v.d}</span></button>`).join('');
+const nums=t=>t.split(/[,\s;]+/).filter(x=>/^-?\d+$/.test(x)).map(Number);
+function cfg(){return{protocol:S.proto,frames:+$('#frames').value,bits:+$('#bits').value,ws:+$('#ws').value,wr:+$('#wr').value,tf:+$('#tf').value,tp:+$('#tp').value,timeout:+$('#timeout').value,lost_frames:$('#lf').value,lost_acks:$('#la').value,unsafe:S.unsafe}}
+function fill(c){S.proto=c.protocol;S.unsafe=!!c.unsafe;for(const k of['frames','bits','ws','wr','tf','tp','timeout'])if(c[k]!=null)$('#'+k).value=c[k];
+ $('#lf').value=[].concat(c.lost_frames??'').join(', ');$('#la').value=[].concat(c.lost_acks??'').join(', ');protoUI();chips();val()}
+function protoUI(){$$('.proto').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p==S.proto));const p=S.proto;
+ if(p=='sw'){$('#ws').value=1;$('#wr').value=1}if(p=='gbn')$('#wr').value=1;$('#ws').disabled=p=='sw';$('#wr').disabled=p!='sr';
+ $('#winHelp').textContent={sw:'Both windows are fixed at 1: one outstanding frame at a time.',gbn:'Receiver window fixed at 1 (it only accepts the next in-order frame). Sender window ≤ 2^m − 1.',sr:'Both windows ≤ 2^(m−1) so old and new frames never share a sequence number.'}[p]}
+function derived(){const m=+$('#bits').value,sp=2**m;if(!(m>=1&&m<=16)){$('#derived').textContent='';return}$('#derived').textContent=`Sequence space 2^${m} = ${sp} (wire seq 0..${sp-1}). Max Ws: ${S.proto=='sw'?1:S.proto=='gbn'?sp-1:sp/2}${S.proto=='sr'?` · max Wr: ${sp/2}`:''}. Now: Ws=${$('#ws').value}, Wr=${$('#wr').value}.`}
+function chips(){const n=Math.min(+$('#frames').value||0,500),L=new Set(nums($('#lf').value)),A=new Set(nums($('#la').value));
+ $('#lfc').innerHTML=Array.from({length:n},(_,i)=>`<button class="lc" data-t="lf" data-i="${i}" aria-pressed="${L.has(i)}">F${i}</button>`).join('');
+ $('#lac').innerHTML=Array.from({length:n},(_,i)=>`<button class="lc" data-t="la" data-i="${i}" aria-pressed="${A.has(i)}">A${i}</button>`).join('')}
+$('#p-sim').addEventListener('click',e=>{const b=e.target.closest('.proto');if(b){S.proto=b.dataset.p;S.unsafe=false;protoUI();val()}
+ const c=e.target.closest('.lc');if(c){const f=$('#'+c.dataset.t),s=new Set(nums(f.value)),i=+c.dataset.i;s.has(i)?s.delete(i):s.add(i);f.value=[...s].sort((a,b)=>a-b).join(', ');chips();val()}});
+$$('#p-sim input').forEach(i=>i.addEventListener('input',()=>{if(i.id=='frames'||i.id=='lf'||i.id=='la')chips();val()}));
+$('#clr').onclick=()=>{$('#lf').value=$('#la').value='';chips();val()};
+$('#rst').onclick=()=>{if(confirm('Reset all parameters to defaults and clear the current simulation?')){stop();fill(DEF)}};
+let vt,okCfg=false;
+function val(){derived();clearTimeout(vt);vt=setTimeout(async()=>{const r=await post('/api/run',{...cfg(),validate_only:1});okCfg=r.ok;showMsgs(r);$('#run').disabled=!r.ok},200)}
+function showMsgs(r){$('#errs').innerHTML=(r.errors||[]).map(e=>`<div class="err" role="alert">⚠ ${esc(e)}</div>`).join('')+(r.warnings||[]).map(w=>`<div class="warn">△ ${esc(w)}</div>`).join('')}
+const post=(u,d)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>r.json()).catch(e=>({ok:false,errors:['Cannot reach the ARQ Studio server: '+e]}));
+/* ---------- natural language ---------- */
+$('#nlGo').onclick=async()=>{const r=await post('/api/parse',{text:$('#nl').value});const c=r.config||{};
+ $('#nlOut').innerHTML=`<div class="hint" style="margin-top:8px"><b>Interpreted:</b> <code>${esc(JSON.stringify(c))}</code></div>`+(r.ambiguities||[]).map(a=>`<div class="warn">? ${esc(a)}</div>`).join('')+(r.notes||[]).map(a=>`<div class="hint">• ${esc(a)}</div>`).join('')+`<button class="btn" id="nlApply" style="margin-top:6px">Apply to form (then review and press Run)</button>`;
+ $('#nlApply').onclick=()=>{const cur=cfg();const m={...cur,...c,lost_frames:c.lost_frames??cur.lost_frames,lost_acks:c.lost_acks??cur.lost_acks};m.protocol=c.protocol||cur.protocol;
+  if(m.protocol=='gbn')m.wr=1;if(m.protocol=='sr'&&c.ws&&!c.wr)m.wr=c.ws;fill(m)}};
+/* ---------- run ---------- */
+function stop(){pause();S.run=null;S.idx=-1;S.T=0;S.fl=[];$('#banner').innerHTML='';render(true);status('Idle','')}
+function status(t,c){const s=$('#status');s.textContent=t;s.className='chip '+c}
+async function runSim(c){go('sim');if(c)fill(c);pause();const r=await post('/api/run',cfg());showMsgs(r);
+ if(!r.ok){S.run=null;S.idx=-1;S.T=0;S.fl=[];$('#banner').innerHTML=`<div class="banner" role="alert"><b>Simulation rejected before transmission began.</b>${(r.errors||[]).map(e=>'<div>'+esc(e)+'</div>').join('')}</div>`;render(true);status('Rejected','bad');return}
+ S.run=r;S.idx=-1;S.T=0;build();$('#banner').innerHTML=r.config.unsafe?`<div class="banner u"><b>Educational unsafe mode:</b> window limits are not enforced to demonstrate sequence-number ambiguity. ${r.valid?'':'<b>Delivery check FAILED, as expected.</b>'}</div>`:'';
+ buildTL();render(true);play()}
+$('#run').onclick=()=>runSim();
+/* ---------- flights (derived purely from engine step records) ---------- */
+function build(){const fl=[],st=S.run.steps;st.forEach(s=>{s.tx.forEach(x=>fl.push({k:'f',n:x.frame,seq:x.seq,at:x.attempt,rx:x.retx,t0:x.start,t1:x.arrive,lost:x.lost,born:s.id,res:-1}));
+ s.acks.forEach(a=>fl.push({k:'a',n:a.label,seq:a.seq,t0:a.send,t1:a.arrive,lost:a.lost,born:s.id,res:-1,note:a.note}))});
+ const q={};fl.forEach(f=>(q[f.k+f.n]=q[f.k+f.n]||[]).push(f));
+ st.forEach(s=>{if(['frame','frame_lost','ack','ack_lost'].includes(s.kind)){const f=(q[(s.kind[0]=='f'?'f':'a')+s.payload[0]]||[]).find(x=>x.res<0&&x.born<=s.id);if(f)f.res=s.id}});S.fl=fl}
+const lastT=()=>S.run?S.run.steps[S.run.steps.length-1].t:0;
+function adv(){const st=S.run.steps;while(S.idx+1<st.length&&st[S.idx+1].t<=S.T+1e-9)S.idx++}
+let raf=0,prev=0;
+function tick(ts){if(!S.play)return;const dt=Math.min((ts-prev)/1000,.1);prev=ts;
+ if(RM){S.acc=(S.acc||0)+dt*S.spd;if(S.acc>=.7){S.acc=0;if(S.idx+1<S.run.steps.length){S.idx++;S.T=S.run.steps[S.idx].t}}}
+ else{S.T=Math.min(S.T+dt*S.spd*RATE,lastT());adv()}
+ render();if(S.idx>=S.run.steps.length-1&&S.T>=lastT()){pause();render(true);return}raf=requestAnimationFrame(tick)}
+function play(){if(!S.run)return;if(S.idx>=S.run.steps.length-1){S.idx=-1;S.T=0}S.play=true;prev=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);$('#b-play').textContent='❚❚ Pause';status('Running','run')}
+function pause(){S.play=false;cancelAnimationFrame(raf);$('#b-play').textContent='▶ Play';if(S.run)status(S.idx>=S.run.steps.length-1?'Complete':'Paused',S.idx>=S.run.steps.length-1?'done':'')}
+function seek(i){if(!S.run)return;pause();S.idx=Math.max(-1,Math.min(S.run.steps.length-1,i));S.T=S.idx<0?0:S.run.steps[S.idx].t;render(true);status(S.idx>=S.run.steps.length-1?'Complete':'Paused',S.idx>=S.run.steps.length-1?'done':'')}
+const imp=s=>['frame_lost','ack_lost','timeout','done'].includes(s.kind)||s.discarded>0||s.newly_buffered.length>0;
+function jump(d){const st=S.run.steps;let i=S.idx+d;while(i>=0&&i<st.length&&!imp(st[i]))i+=d;seek(i<0?0:Math.min(i,st.length-1))}
+$('#b-play').onclick=()=>S.play?pause():play();$('#b-start').onclick=()=>seek(-1);$('#b-back').onclick=()=>seek(S.idx-1);$('#b-fwd').onclick=()=>seek(S.idx+1);
+$('#b-ni').onclick=()=>S.run&&jump(1);$('#b-pi').onclick=()=>S.run&&jump(-1);
+$('#spd').oninput=e=>{S.spd=SPD[e.target.value];$('#spdv').textContent=S.spd+'×'};
+addEventListener('keydown',e=>{if(!$('#p-sim').classList.contains('on')||/INPUT|TEXTAREA/.test(e.target.tagName))return;if(e.code=='Space'){e.preventDefault();$('#b-play').click()}if(e.key=='ArrowRight')seek(S.idx+1);if(e.key=='ArrowLeft')seek(S.idx-1)});
+/* ---------- rendering ---------- */
+const snap=()=>S.idx<0?{base:0,sent_hi:0,acked:[],timers:{},delivered:0,buffered:[]}:S.run.steps[S.idx].snap;
+function hist(){const h={tmo:new Set(),dis:{},att:{}};if(!S.run)return h;for(let i=0;i<=S.idx;i++){const s=S.run.steps[i];if(s.kind=='timeout'&&s.timed_out)h.tmo.add(s.payload[0]);s.tx.forEach(x=>{h.tmo.delete(x.frame);h.att[x.frame]=x.attempt});if(s.kind=='frame'&&s.discarded>0)h.dis[s.payload[0]]=(h.dis[s.payload[0]]||0)+1}return h}
+function render(full){const r=S.run;$('#pb').style.width=(r&&lastT()?Math.min(100,100*S.T/lastT()):0)+'%';$('#net').classList.toggle('playing',S.play);$('#clock').textContent=`Simulated time t = ${S.T.toFixed(2)}`+(r?`  ·  event ${Math.max(S.idx+1,0)}/${r.steps.length}`:'');$('#pos').textContent=r?'':'Configure a scenario and press Run.';
+ drawNet();if(full||S.lastIdx!==S.idx){S.lastIdx=S.idx;explain();strips();markTL();results()}
+ const sn=snap();$$('.tm').forEach(e=>{const d=sn.timers[e.dataset.f];if(d!=null)e.style.width=Math.max(0,Math.min(100,(d-S.T)/+(S.run.config.timeout)*100))+'%'})}
+function drawNet(){const c=S.run?.config,sn=snap();const cs=S.run&&S.idx>=0?S.run.steps[S.idx]:null,age=cs?S.T-cs.t:9,fresh=age<1.6;
+ const act={s:fresh&&cs&&(cs.kind=='timeout'?'var(--bad)':cs.newly_acked.length?'var(--ok)':null),r:fresh&&cs&&(cs.delivered.length?'var(--ok)':cs.newly_buffered.length?'var(--buf)':cs.discarded>0?'var(--dis)':null)};
+ let g='<defs><filter id="gl" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><linearGradient id="lg" x1="0" x2="1"><stop offset="0" style="stop-color:var(--ac)"/><stop offset="1" style="stop-color:var(--ok)"/></linearGradient></defs>';const X0=190,X1=710,YD=95,YA=175;
+ const box=(x,l,col,lines,a)=>`<rect x="${x}" y="30" width="150" height="190" rx="16" fill="var(--s2)" fill-opacity=".92" stroke="${a||col}" stroke-width="${a?4:2}" ${a?'filter="url(#gl)"':''}/><rect class="nodering" x="${x-6}" y="24" width="162" height="202" rx="20" fill="none" stroke="${col}" stroke-opacity=".35"/><g transform="translate(${x+65},33)" stroke="${col}" fill="none" stroke-width="1.6"><rect width="20" height="13" rx="2"/><path d="M6 17h8M10 13v4"/></g><text x="${x+75}" y="72" text-anchor="middle" font-weight="700" letter-spacing="2">${l}</text>`+lines.map((t,i)=>`<text x="${x+75}" y="${92+i*19}" text-anchor="middle" font-size="11" style="fill:var(--mu)">${t}</text>`).join('');
+ const w=c?{b:sn.base,hi:S.run&&S.idx>=0?sn.sent_hi:0}:{};
+ g+=box(40,'SENDER','var(--ac)',c?[`window [${sn.base}..${sn.base+c.ws-1}]`,`next new: ${S.idx<0?0:sn.next_new}`,`outstanding: ${(sn.sent_hi-sn.base)-sn.acked.length}`,`acked: ${sn.base+sn.acked.length}`,`timers: ${Object.keys(sn.timers).length}`]:['—'],act.s);
+ g+=box(710,'RECEIVER','var(--ok)',c?[`window [${sn.delivered}..${sn.delivered+c.wr-1}]`,`expect seq: ${sn.delivered%2**c.bits}`,`delivered: ${sn.delivered}`,`buffered: ${(sn.buffered||[]).join(',')||'—'}`]:['—'],act.r);
+ g+=`<rect x="${X0}" y="${YD+8}" width="${X1-X0}" height="28" rx="14" fill="var(--ac)" fill-opacity=".06"/><rect x="${X0}" y="${YA+8}" width="${X1-X0}" height="28" rx="14" fill="var(--ok)" fill-opacity=".06"/><line class="lane" x1="${X0}" y1="${YD+22}" x2="${X1}" y2="${YD+22}" stroke="var(--ac)" stroke-opacity=".55" stroke-width="2"/><line class="lane r" x1="${X0}" y1="${YA+22}" x2="${X1}" y2="${YA+22}" stroke="var(--ok)" stroke-opacity=".55" stroke-width="2"/><text x="450" y="52" text-anchor="middle" font-size="11" style="fill:var(--mu)">CHANNEL — data →</text><text x="450" y="235" text-anchor="middle" font-size="11" style="fill:var(--mu)">← acknowledgements</text>`;
+ if(S.run)for(const f of S.fl){if(f.born>S.idx)continue;let p=(S.T-f.t0)/(f.t1-f.t0);if(RM)p=Math.round(p*4)/4;const isF=f.k=='f';
+  const x=isF?X0+(X1-X0)*Math.min(p,1):X1-(X1-X0)*Math.min(p,1),y=isF?YD:YA,vanish=.62;
+  if(f.lost&&S.T<f.t1+1.6){if(p<vanish){g+=pkt(f,x,y)}else{const bx=isF?X0+(X1-X0)*vanish:X1-(X1-X0)*vanish;g+=`${burst(bx,y+22,S.T-f.t0-(f.t1-f.t0)*vanish)}<g transform="translate(${bx},${y})" style="opacity:${Math.max(.2,1-(S.T-f.t0-(f.t1-f.t0)*vanish)/3)}"><text x="0" y="22" text-anchor="middle" font-size="26" fill="var(--bad)" style="fill:var(--bad)">✕</text>${f.res>=0&&f.res<=S.idx?`<text x="0" y="-8" text-anchor="middle" font-size="11" font-weight="700" style="fill:var(--bad)">${isF?'FRAME':'ACK'} ${f.n} LOST</text>`:''}</g>`}}
+  else if(!f.lost&&S.T<=f.t1+1e-9&&!(f.res>=0&&f.res<=S.idx))g+=pkt(f,x,y)}
+ $('#net').innerHTML=g}
+function burst(x,y,dt){if(dt<0||dt>2)return'';const k=Math.min(1,dt/1.4),o=1-k;let s=`<circle cx="${x}" cy="${y}" r="${10+34*k}" fill="none" stroke="var(--bad)" stroke-width="${3*o+.5}" opacity="${o}"/>`;
+ for(let i=0;i<8;i++){const a=i*Math.PI/4+.4,r1=8+10*k,r2=14+38*k;s+=`<line x1="${x+r1*Math.cos(a)}" y1="${y+r1*Math.sin(a)}" x2="${x+r2*Math.cos(a)}" y2="${y+r2*Math.sin(a)}" stroke="var(--bad)" stroke-width="2.5" stroke-linecap="round" opacity="${o}"/>`}return s}
+function pkt(f,x,y){const isF=f.k=='f',col=isF?(f.rx?'var(--rx)':'var(--ac)'):'var(--ok)',d=isF?-1:1;let tr='';for(let i=3;i>=1;i--)tr+=`<rect x="${-30+d*i*16}" y="6" width="60" height="32" rx="8" fill="${col}" opacity="${.13/i*1.6}"/>`;
+ return`<g transform="translate(${x},${y})" filter="url(#gl)">${tr}<rect x="-30" y="0" width="60" height="44" rx="9" fill="var(--s1)" stroke="${col}" stroke-width="2.2" ${isF?'':'stroke-dasharray="4 3"'}/><text x="0" y="19" text-anchor="middle" font-size="12" font-weight="700">${isF?'F':'ACK '}${f.n}</text><text x="0" y="35" text-anchor="middle" font-size="10" style="fill:var(--mu)">seq ${f.seq}${isF&&f.rx?' ↻#'+f.at:''}</text></g>`}
+const pk0=f=>'k'+f;
+function strips(){const r=S.run;S.prevC=S.nextC;S.nextC={};if(!r){$('#sst').innerHTML=$('#rst2').innerHTML='<span class="hint">No simulation yet.</span>';$('#why').textContent='';return}
+ const c=r.config,sn=snap(),h=hist(),A=new Set(sn.acked),B=new Set(sn.buffered||[]),M=2**c.bits,sel=S.sel,T=Object.keys(sn.timers);
+ let a='',b='';for(let f=0;f<c.frames;f++){let cl='',lab='',inW=f>=sn.base&&f<sn.base+c.ws;
+  if(f<sn.base||A.has(f)){cl='acked'}else if(f>=sn.sent_hi){cl=inW?'':'blocked'}else cl=h.tmo.has(f)?'tmo':'out';
+  const pk='s'+f+cl+(inW?'w':'');const pp=S.prevC&&S.prevC[pk0(f)]!=null&&S.prevC[pk0(f)]!=pk&&S.play?' pop':'';(S.nextC=S.nextC||{})[pk0(f)]=pk;
+  a+=`<div class="cell${pp} ${cl} ${inW?'win':''} ${sel.has(f)?'hl':''}" title="Frame ${f}, wire seq ${f%M}${h.att[f]>1?', attempt '+h.att[f]:''}${cl=='blocked'?' — outside sender window, not allowed yet':''}">${f}<i>s${f%M}</i>${h.att[f]>1?`<sup>↻${h.att[f]}</sup>`:''}${sn.timers[f]!=null?`<span class="tm" data-f="${f}"></span>`:''}</div>`;
+  const dl=f<sn.delivered,bf=B.has(f),inR=f>=sn.delivered&&f<sn.delivered+c.wr;
+  b+=`<div class="cell ${dl?'delivered':bf?'buffered':''} ${inR?'win':''} ${sel.has(f)?'hl':''}" title="Frame ${f} ${dl?'delivered':bf?'buffered (out of order)':'not yet received'}${h.dis[f]?'; discarded '+h.dis[f]+'×':''}">${f}<i>s${f%M}</i>${h.dis[f]?`<sup>✕${h.dis[f]}</sup>`:''}</div>`}
+ $('#sst').innerHTML=a;$('#rst2').innerHTML=b;const blocked=sn.sent_hi<c.frames&&sn.sent_hi>=sn.base+c.ws&&S.idx>=0;
+ $('#why').textContent=(blocked?`Sender is blocked: next frame ${sn.sent_hi} lies outside window [${sn.base}..${sn.base+c.ws-1}] until frame ${sn.base} is acknowledged. `:'')+'Blue outline = current window · ✓ acked/delivered · ⏱ timed out (resend pending) · ▤ buffered · ✕n = discarded n times · ↻n = attempt n.'}
+/* timeline */
+const ACT={Sender:'Sender',Receiver:'Receiver',Channel:'Channel'};
+function buildTL(){const L=[];S.run.steps.forEach(s=>s.logs.forEach(l=>{const m=l.match(/^\[t=\s*([\d.]+)\]\s+(\w+)\s*:\s*(.*)$/);if(m)L.push({id:s.id,t:m[1],a:m[2],x:m[3]});else if(s.kind=='done'&&l.trim())L.push({id:s.id,t:'',a:'Summary',x:l})}));S.tl=L;
+ $('#flt').innerHTML=['Sender','Receiver','Channel','ACK','Retransmit','Timeout'].map(k=>`<button class="btn rc" aria-pressed="false" data-f="${k}">${k}</button>`).join('');$$('#flt button').forEach(b=>b.onclick=()=>{S.filt.has(b.dataset.f)?S.filt.delete(b.dataset.f):S.filt.add(b.dataset.f);b.setAttribute('aria-pressed',S.filt.has(b.dataset.f));drawTL()});S.filt.clear();drawTL()}
+function pass(e){if(!S.filt.size)return true;const f=S.filt,am=['Sender','Receiver','Channel'].filter(k=>f.has(k)),xm=[];if(f.has('ACK'))xm.push(/ACK/);if(f.has('Retransmit'))xm.push(/retransmit|Retransmit/i);if(f.has('Timeout'))xm.push(/Timeout/);
+ return (!am.length||am.includes(e.a))&&(!xm.length||xm.some(r=>r.test(e.x)))}
+function drawTL(){$('#tl').innerHTML=S.tl.map((e,i)=>pass(e)?`<div class="ev ${/LOST/.test(e.x)?'loss':/Timeout/.test(e.x)?'tmo':''}" data-id="${e.id}"><span class="a">t=${e.t} ${e.a.toUpperCase()}</span> ${esc(e.x)}</div>`:'').join('');markTL()}
+$('#tl').onclick=e=>{const v=e.target.closest('.ev');if(v)seek(+v.dataset.id)};
+function markTL(){let first=null;$$('#tl .ev').forEach(e=>{const id=+e.dataset.id;e.classList.toggle('cur',id==S.idx);e.classList.toggle('fut',id>S.idx);if(id==S.idx&&!first)first=e});const t=$('#tl');if(first&&(S.play||S.sel.size))t.scrollTop=first.offsetTop-t.clientHeight/2}
+function explain(){const e=$('#explain'),r=S.run;S.sel=new Set();if(!r||S.idx<0){e.textContent='Select or step to an event.';return}const s=r.steps[S.idx],c=r.config,P=PR[c.protocol].n,o=[];const n=s.payload[0];
+ if(['frame','frame_lost','ack','ack_lost','timeout'].includes(s.kind)&&n!=null)S.sel.add(n);s.tx.forEach(x=>S.sel.add(x.frame));
+ const k=s.kind;if(k=='frame_lost')o.push(`Frame ${n} was on the configured loss list, so the channel dropped its first transmission. The receiver never saw it and no ACK exists for it.`);
+ if(k=='ack_lost')o.push(`ACK ${n} was on the loss list and vanished on the way back. The sender cannot tell this from a lost frame.`);
+ if(k=='timeout')o.push(`The retransmission timer for frame ${n} reached its deadline with no acknowledgement. ${c.protocol=='gbn'?'Go-Back-N goes back and resends every outstanding frame from the oldest unacknowledged one.':c.protocol=='sr'?'Selective Repeat resends only this frame; other frames keep their own timers.':'Stop-and-Wait resends the single unacknowledged frame.'}`);
+ if(s.delivered.length)o.push(`Frame(s) ${s.delivered.join(', ')} passed to the upper layer in order.`);
+ if(s.newly_buffered.length)o.push(`Frame(s) ${s.newly_buffered.join(', ')} arrived out of order inside the receiver window, so Selective Repeat buffered them.`);
+ if(s.discarded>0)o.push(c.protocol=='gbn'?'Go-Back-N discards anything except the next expected frame and re-sends the last cumulative ACK.':c.protocol=='sr'?'The frame was a duplicate or outside the receiver window, so it was discarded (a duplicate is re-ACKed).':'The receiver already had this frame (its ACK was lost), so it discarded the duplicate and re-ACKed.');
+ if(s.newly_acked.length)o.push(`Sender processed an ACK: frame(s) ${s.newly_acked.join(', ')} acknowledged; window base is now ${s.snap.base}.`);
+ if(s.tx.some(x=>x.retx))o.push('Attempt counter > 1 marks a retransmission; it travels again as a separate event.');
+ if(k=='done')o.push(`${P} finished: ${r.valid?'all frames acknowledged and delivered once, in order.':'delivery check FAILED.'}`);
+ e.innerHTML=o.map(x=>`<div>• ${esc(x)}</div>`).join('')||'<div>Transmission/ACK bookkeeping step; no protocol decision beyond the log line.</div>'}
+/* results */
+const ratio=(a,b)=>b?(a/b):0;
+function results(){const el=$('#res'),r=S.run;el.classList.remove('win-ok');if(!r){el.innerHTML='<h2>Results</h2><div class="hint">Run a scenario to see the engine\'s statistics.</div>';return}
+ if(S.idx<r.steps.length-1){el.innerHTML='<h2>Results</h2><div class="hint">Shown when the simulation completes (use ⇥ to jump to the end).</div>';return}
+ const s=r.stats,n=r.config.frames,m=(l,v,t)=>`<div class="m" ${t?`title="${t}"`:''}><b>${v}</b><span>${l}</span></div>`;
+ el.innerHTML=`<div class="bar"><h2 style="margin:0;flex:1">Performance summary — ${r.config.name}</h2><span class="chip ${r.valid?'done':'bad'}">${r.valid?'DELIVERY CHECK PASSED':'DELIVERY CHECK FAILED'}</span></div>
+ <div class="prog" role="progressbar" aria-valuenow="${s.delivered}" aria-valuemax="${n}"><div style="width:${100*ratio(s.delivered,n)}%"></div></div>
+ <div class="cards">${m('Frames configured',n)}${m('Delivered',s.delivered)}${m('Transmission attempts',s.attempts)}${m('Retransmissions',s.retransmissions)}${m('Frames discarded',s.discarded)}${m('Data frames lost',s.frames_lost)}${m('ACKs generated',s.acks_sent)}${m('ACKs lost',s.acks_lost)}${m('Timeouts',s.timeouts)}${m('Simulated time',s.sim_time+' tu')}
+ ${m('Delivery ratio',(100*ratio(s.delivered,n)).toFixed(0)+'%','delivered ÷ configured frames')}${m('Retransmission ratio',(100*ratio(s.retransmissions,s.attempts)).toFixed(0)+'%','retransmissions ÷ attempts (0 if no attempts)')}${m('Throughput',ratio(s.delivered,s.sim_time).toFixed(3),'delivered frames per simulated time unit (0 if time is 0)')}</div>
+ <div class="hint" style="margin-top:8px">Engine statistics shown verbatim; ratios are derived (hover for formulas). ${s.frames_lost+s.acks_lost} channel losses caused ${s.timeouts} timeout(s) and ${s.retransmissions} retransmission(s).</div>
+ <div class="tool" style="margin-top:8px"><button class="btn" onclick="dl('arq-log.txt',S.run.log)">Download log</button><button class="btn" onclick="dl('arq-events.json',JSON.stringify(S.run.steps,null,1))">Download events</button><button class="btn" onclick="dl('arq-summary.json',JSON.stringify({config:S.run.config,stats:S.run.stats,valid:S.run.valid},null,1))">Download config + summary</button></div>`;countUp();if(r.valid){void el.offsetWidth;el.classList.add('win-ok')}}
+function countUp(){$$('#res .m b').forEach(e=>{const m=e.textContent.match(/^([\d.]+)(.*)$/);if(!m||RM)return;const to=+m[1],dp=(m[1].split('.')[1]||'').length,t0=performance.now();(function f(t){const k=Math.min(1,(t-t0)/700),v=to*(1-Math.pow(1-k,3));e.textContent=v.toFixed(dp)+m[2];if(k<1)requestAnimationFrame(f)})(t0)})}
+function dl(n,t){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t]));a.download=n;a.click();URL.revokeObjectURL(a.href)}
+/* ---------- compare ---------- */
+let CMP=null;
+$('#cmpGo').onclick=async()=>{const c=cfg();$('#cmpOut').textContent='Running…';CMP=await post('/api/compare',{...c,unsafe:false});
+ const keys=['sw','gbn','sr'],ok=keys.filter(k=>CMP[k].ok),mx=f=>Math.max(1,...ok.map(k=>f(CMP[k].stats)));
+ const row=(l,f,bar)=>`<tr><th>${l}</th>${keys.map(k=>{const r=CMP[k];return!r.ok?'<td class="n">—</td>':`<td class="n">${bar?`<div class="hb"><i style="width:${70*f(r.stats)/mx(f)}px"></i>${f(r.stats)}</div>`:f(r.stats)}</td>`}).join('')}</tr>`;
+ let h=`<table><tr><th>Metric</th>${keys.map(k=>`<th>${PR[k].n}</th>`).join('')}</tr><tr><th>Effective Ws / Wr</th>${keys.map(k=>`<td class="n">${CMP[k].config?CMP[k].config.ws+' / '+CMP[k].config.wr:'—'}</td>`).join('')}</tr><tr><th>Status</th>${keys.map(k=>`<td>${CMP[k].ok?(CMP[k].valid?'✓ delivered in order':'✗ FAILED'):'REJECTED: '+esc((CMP[k].errors||[]).join(' '))}</td>`).join('')}</tr>`+
+ [['Successfully delivered',s=>s.delivered],['Transmission attempts',s=>s.attempts,1],['Retransmissions',s=>s.retransmissions,1],['Discarded frames',s=>s.discarded],['Timeouts',s=>s.timeouts],['Simulated time',s=>s.sim_time,1]].map(a=>row(...a)).join('')+`<tr><th>Animation</th>${keys.map(k=>`<td>${CMP[k].ok?`<button class="btn" data-open="${k}">Open</button>`:''}</td>`).join('')}</tr></table>`;
+ const g=CMP.gbn.ok&&CMP.sr.ok?[CMP.gbn.stats,CMP.sr.stats]:null;
+ h+=`<div class="hint" style="margin-top:8px">${g?`Why they differ here: Go-Back-N discarded ${g[0].discarded} frame(s) and made ${g[0].retransmissions} retransmission(s); Selective Repeat discarded ${g[1].discarded} and made ${g[1].retransmissions}. SR buffers out-of-order frames and resends only timed-out frames; GBN resends from the oldest unacknowledged frame. One scenario does not rank protocols in general — a lost cumulative ACK, for example, favours GBN (see Test 3a).`:'Fix the rejected configuration to compare protocols.'}</div>`;
+ $('#cmpOut').innerHTML=h;$$('[data-open]').forEach(b=>b.onclick=()=>{const r=CMP[b.dataset.open];fill({...r.config,unsafe:false});go('sim');S.run=r;S.idx=-1;S.T=0;build();buildTL();$('#banner').innerHTML='';render(true);play()})};
+$('#cmpTbl').onclick=()=>{if(!CMP)return;const k=['sw','gbn','sr'];let t='| Metric | '+k.map(x=>PR[x].n).join(' | ')+' |\n|---|---|---|---|\n';const f=(l,g)=>t+=`| ${l} | ${k.map(x=>CMP[x].ok?g(CMP[x]):'rejected').join(' | ')} |\n`;
+ f('Ws / Wr',r=>r.config.ws+' / '+r.config.wr);f('Delivered',r=>r.stats.delivered);f('Attempts',r=>r.stats.attempts);f('Retransmissions',r=>r.stats.retransmissions);f('Discarded',r=>r.stats.discarded);f('Timeouts',r=>r.stats.timeouts);f('Simulated time',r=>r.stats.sim_time);dl('comparison.md',t)};
+/* ---------- scenarios / learn / about ---------- */
+const OBJ={Headline:'See all three recovery strategies on the assignment sample input.','Test 1':'Pipelining pays off even with no errors.','Test 2':'One lost frame: GBN goes back, SR resends one.','Test 3a':'A later cumulative ACK can cover a lost ACK in GBN only.','Test 3b':'No later ACK exists, so everyone must time out.','Test 4':'Consecutive losses compound the cost differently per protocol.','Test 5':'Window size trades throughput against wasted retransmissions.','Test 6':'The number of sequence bits caps the usable window.','Test 7':'Illegal windows are rejected before transmission.','Test 7b':'Why SR windows must be ≤ 2^(m−1): sequence-number ambiguity.'};
+fetch('/api/scenarios').then(r=>r.json()).then(L=>{$('#scn').innerHTML=L.map((s,i)=>{const key=Object.keys(OBJ).find(k=>s.title.startsWith(k))||'';return`<div class="card" style="margin:0"><h3>${esc(s.title)}</h3><div class="hint">${esc(s.desc)}</div><div class="hint"><b>Learn:</b> ${esc(OBJ[key]||'')}</div><div style="margin-top:6px">${s.runs.map((r,j)=>`<button class="btn rc" data-s="${i}" data-r="${j}" title="${esc(r.note)}">${r.protocol.toUpperCase()} ${r.ws}/${r.wr} m=${r.bits}${r.unsafe?' ⚠ unsafe':''}</button>`).join('')}</div><div class="tool" style="margin-top:8px"><button class="btn" data-load="${i}">Load first</button>${s.runs.length==3&&s.runs[0].protocol=='sw'?`<button class="btn" data-cmp="${i}">Compare all three</button>`:''}</div></div>`}).join('');
+ $('#scn').onclick=e=>{const b=e.target.closest('button');if(!b)return;const g=(i,j)=>({...L[i].runs[j],protocol:L[i].runs[j].protocol});
+  if(b.dataset.r!=null)runSim(g(b.dataset.s,b.dataset.r));else if(b.dataset.load!=null){fill(g(b.dataset.load,0));go('sim')}else if(b.dataset.cmp!=null){fill(g(b.dataset.cmp,1));go('cmp');$('#cmpGo').click()}}});
+const LEARN=[['Why does the sequence number wrap?','With m = 3 the space is 0–7. After 7 the wire number returns to 0 while the absolute frame count keeps rising: frame 8 carries seq 0. Loss settings use absolute numbers, so losing frame 8 never loses frame 0.'],['Why is the GBN window ≤ 2^m − 1?','With a window of 2^m the receiver could not tell a whole new window from a retransmission of the old one, because every sequence number would repeat.'],['Why is the SR window ≤ 2^(m−1)?','Sender and receiver windows overlap by at most one window; with each ≤ half the space, an old duplicate can never look like a new frame (see Test 7b).'],['Out-of-order frames','Stop-and-Wait accepts only the expected frame and re-ACKs duplicates. Go-Back-N discards out-of-order frames and uses cumulative ACKs. Selective Repeat buffers frames inside its receiver window and ACKs individually.'],['Time model','Tf = 1 to transmit, Tp = 2 propagation each way, timeout 6 counted from the end of transmission. Losses hit the first attempt only, so every run terminates.']];
+$('#learn').innerHTML=LEARN.map(([t,d])=>`<div class="card" style="margin:0"><h3>${t}</h3><p class="hint" style="font-size:13px">${d}</p></div>`).join('');
+$('#about').innerHTML=`<h2>About / architecture</h2><p><b>ARQ Studio</b> is a thin visual layer over the original <code>arq_simulator.py</code>. A dependency-free Python server (<code>ui_backend.py</code>, standard library only) validates input with the engine's own <code>validate_config()</code>, runs <code>run_simulation()</code>, and returns the engine's structured step records plus its unchanged text log. The browser holds that immutable list and derives every frame, ACK, timer and window from it; stepping backward simply re-renders an earlier step. The frontend contains no ARQ logic.</p><p>Engine change: an optional <code>observer</code> callback records transmissions, ACKs, timer deadlines and state snapshots per processed event; with no observer the CLI and <code>run_tests.py</code> behave exactly as before. Rationale for a local web UI: rich SVG animation, no installs beyond Python, easy to demo.</p><p class="hint">Run: <code>python3 ui_backend.py</code> → http://127.0.0.1:8000. Tests: <code>python3 run_tests.py</code> and <code>python3 test_ui_backend.py</code>.</p>`;
+fill(DEF);render(true);
+</script></body></html>

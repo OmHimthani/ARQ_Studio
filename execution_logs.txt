@@ -1,0 +1,3097 @@
+EXECUTION LOGS - Generalized ARQ Protocol Simulator
+============================================================
+Time units: frame transmission = 1, one-way propagation = 2, timeout = 6.
+Lost frames/ACKs are lost on their first transmission only.
+
+Contents
+--------
+  Headline scenario (the assignment's sample input)
+  Test 1 - No frame or ACK loss
+  Test 2 - One data frame lost
+  Test 3a - One ACK lost
+  Test 3b - The last ACK lost
+  Test 4 - Multiple consecutive data frames lost
+  Test 5 - Different sender window sizes for GBN and SR
+  Test 6 - Different sequence number bit lengths
+  Test 7 - Invalid configurations
+  Test 7b - Why the window must be limited (demonstration)
+
+
+##############################################################################
+# Headline scenario (the assignment's sample input)
+# 10 frames, m = 3, window 4, frames 3 and 7 lost, ACK 5 lost - all three protocol selections.
+##############################################################################
+
+------------------------------------------------------------------------------
+Headline | Stop-and-Wait | frames=10, m=3, Ws=1, Wr=1, lost frames=[3, 7], lost ACKs=[5]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Stop-and-Wait
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = [5] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame or ACK lost, retransmitting the unacknowledged frame 3
+[t= 22.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 25.00] Receiver: ACK 3 (seq 3) generated
+[t= 27.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 27.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 30.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 30.00] Receiver: ACK 4 (seq 4) generated
+[t= 32.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 32.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 35.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 35.00] Receiver: ACK 5 (seq 5) generated
+[t= 37.00] Channel : ACK 5 LOST in transit (never reaches the sender)
+[t= 39.00] Sender  : Timeout occurred for frame 5 -> frame or ACK lost, retransmitting the unacknowledged frame 5
+[t= 39.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 42.00] Receiver: Frame 5 (seq 5) is a duplicate (expected seq 6) -> discarded
+[t= 42.00] Receiver: ACK 5 (seq 5) generated (re-ACK for duplicate, original ACK was probably lost)
+[t= 44.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 44.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 47.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 47.00] Receiver: ACK 6 (seq 6) generated
+[t= 49.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 49.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 52.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 56.00] Sender  : Timeout occurred for frame 7 -> frame or ACK lost, retransmitting the unacknowledged frame 7
+[t= 56.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 59.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 59.00] Receiver: ACK 7 (seq 7) generated
+[t= 61.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 61.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 64.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 64.00] Receiver: ACK 8 (seq 0) generated
+[t= 66.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 66.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 69.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 69.00] Receiver: ACK 9 (seq 1) generated
+[t= 71.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 71.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Stop-and-Wait
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 13
+Total retransmissions         : 3
+Total frames discarded        : 1
+Data frames lost in channel   : 2
+ACKs generated / lost         : 11 / 1
+Timeouts                      : 3
+Total simulated time          : 71 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Headline | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=[3, 7], lost ACKs=[5]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = [5] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) is out of order (expected seq 3) -> discarded
+[t=  8.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  9.00] Receiver: Frame 5 (seq 5) is out of order (expected seq 3) -> discarded
+[t=  9.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting outstanding frames 3..6 (go back to 3)
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) is out of order (expected seq 3) -> discarded
+[t= 10.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 10.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 12.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 13.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 13.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 14.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 14.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 15.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 15.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 15.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 16.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 16.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Channel : ACK 5 LOST in transit (never reaches the sender)
+[t= 18.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 18.00] Sender  : ACK 6 received (cumulative) -> frames 5..6 acknowledged
+[t= 18.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 19.00] Receiver: Frame 8 (seq 0) is out of order (expected seq 7) -> discarded
+[t= 19.00] Receiver: ACK 6 (seq 6) generated (re-ACK of last in-order frame 6)
+[t= 21.00] Receiver: Frame 9 (seq 1) is out of order (expected seq 7) -> discarded
+[t= 21.00] Receiver: ACK 6 (seq 6) generated (re-ACK of last in-order frame 6)
+[t= 21.00] Sender  : ACK 6 (seq 6) received -> duplicate, ignored
+[t= 22.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting outstanding frames 7..9 (go back to 7)
+[t= 22.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 23.00] Sender  : ACK 6 (seq 6) received -> duplicate, ignored
+[t= 23.00] Sender  : Frame 8 (seq 0) retransmitted (attempt 2)
+[t= 24.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 25.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 26.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 26.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 27.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 27.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 27.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 28.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 29.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 29.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 17
+Total retransmissions         : 7
+Total frames discarded        : 5
+Data frames lost in channel   : 2
+ACKs generated / lost         : 15 / 1
+Timeouts                      : 2
+Total simulated time          : 29 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Headline | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=[3, 7], lost ACKs=[5]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = [5] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received out of order -> buffered (receiver window 3..6)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  9.00] Receiver: Frame 5 (seq 5) received out of order -> buffered (receiver window 3..6)
+[t=  9.00] Receiver: ACK 5 (seq 5) generated
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting only frame 3
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) received out of order -> buffered (receiver window 3..6)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 11.00] Channel : ACK 5 LOST in transit (never reaches the sender)
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 13.00] Sender  : Timeout occurred for frame 5 -> frame loss detected
+[t= 13.00] Sender  : Retransmitting only frame 5
+[t= 13.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 13.00] Receiver: ACK 3 (seq 3) generated
+[t= 13.00] Receiver: Delivered frame(s) 3..6 to the upper layer in order; receiver window slides to base 7
+[t= 15.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 15.00] Sender  : Window slides: base 3 -> 5
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Receiver: Frame 5 (seq 5) was already delivered -> duplicate discarded
+[t= 16.00] Receiver: ACK 5 (seq 5) generated (re-ACK, the earlier ACK was probably lost)
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 18.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 18.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 18.00] Sender  : Window slides: base 5 -> 7
+[t= 18.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 19.00] Receiver: Frame 8 (seq 0) received out of order -> buffered (receiver window 7..10)
+[t= 19.00] Receiver: ACK 8 (seq 0) generated
+[t= 21.00] Receiver: Frame 9 (seq 1) received out of order -> buffered (receiver window 7..10)
+[t= 21.00] Receiver: ACK 9 (seq 1) generated
+[t= 21.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 22.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting only frame 7
+[t= 22.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 23.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 25.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 25.00] Receiver: ACK 7 (seq 7) generated
+[t= 25.00] Receiver: Delivered frame(s) 7..9 to the upper layer in order; receiver window slides to base 10
+[t= 27.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 27.00] Sender  : Window slides: base 7 -> 10
+[t= 27.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 13
+Total retransmissions         : 3
+Total frames discarded        : 1
+Data frames lost in channel   : 2
+ACKs generated / lost         : 11 / 1
+Timeouts                      : 3
+Total simulated time          : 27 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 1 - No frame or ACK loss
+# Baseline: shows the throughput benefit of pipelining (window 4 for GBN and SR).
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 1 | Stop-and-Wait | frames=10, m=3, Ws=1, Wr=1, lost frames=-, lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Stop-and-Wait
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 18.00] Receiver: ACK 3 (seq 3) generated
+[t= 20.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 20.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 23.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 23.00] Receiver: ACK 4 (seq 4) generated
+[t= 25.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 25.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 28.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 28.00] Receiver: ACK 5 (seq 5) generated
+[t= 30.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 30.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 33.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 33.00] Receiver: ACK 6 (seq 6) generated
+[t= 35.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 35.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 38.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 38.00] Receiver: ACK 7 (seq 7) generated
+[t= 40.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 40.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 43.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 43.00] Receiver: ACK 8 (seq 0) generated
+[t= 45.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 45.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 48.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 48.00] Receiver: ACK 9 (seq 1) generated
+[t= 50.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 50.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Stop-and-Wait
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 10
+Total retransmissions         : 0
+Total frames discarded        : 0
+Data frames lost in channel   : 0
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 0
+Total simulated time          : 50 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 1 | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=-, lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t=  6.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t=  8.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t=  8.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t=  8.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  9.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t=  9.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 10.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 10.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 10.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 10.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 11.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 11.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 11.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 11.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 12.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 13.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 13.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 13.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 14.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 14.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 15.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 16.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 16.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 10
+Total retransmissions         : 0
+Total frames discarded        : 0
+Data frames lost in channel   : 0
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 0
+Total simulated time          : 16 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 1 | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=-, lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t=  6.00] Receiver: ACK 3 (seq 3) generated
+[t=  6.00] Receiver: Delivered frame(s) 3 to the upper layer in order; receiver window slides to base 4
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received successfully (in order)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  8.00] Receiver: Delivered frame(s) 4 to the upper layer in order; receiver window slides to base 5
+[t=  8.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t=  8.00] Sender  : Window slides: base 3 -> 4
+[t=  8.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  9.00] Receiver: Frame 5 (seq 5) received successfully (in order)
+[t=  9.00] Receiver: ACK 5 (seq 5) generated
+[t=  9.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 10.00] Receiver: Frame 6 (seq 6) received successfully (in order)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 10.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 10.00] Sender  : Window slides: base 4 -> 5
+[t= 10.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 11.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 11.00] Receiver: ACK 7 (seq 7) generated
+[t= 11.00] Receiver: Delivered frame(s) 7 to the upper layer in order; receiver window slides to base 8
+[t= 11.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 11.00] Sender  : Window slides: base 5 -> 6
+[t= 11.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 12.00] Sender  : Window slides: base 6 -> 7
+[t= 13.00] Receiver: Frame 8 (seq 0) received successfully (in order)
+[t= 13.00] Receiver: ACK 8 (seq 0) generated
+[t= 13.00] Receiver: Delivered frame(s) 8 to the upper layer in order; receiver window slides to base 9
+[t= 13.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 13.00] Sender  : Window slides: base 7 -> 8
+[t= 14.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 14.00] Receiver: ACK 9 (seq 1) generated
+[t= 14.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 15.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 15.00] Sender  : Window slides: base 8 -> 9
+[t= 16.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 16.00] Sender  : Window slides: base 9 -> 10
+[t= 16.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 10
+Total retransmissions         : 0
+Total frames discarded        : 0
+Data frames lost in channel   : 0
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 0
+Total simulated time          : 16 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 2 - One data frame lost
+# Frame 3 is lost on its first transmission.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 2 | Stop-and-Wait | frames=10, m=3, Ws=1, Wr=1, lost frames=[3], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Stop-and-Wait
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame or ACK lost, retransmitting the unacknowledged frame 3
+[t= 22.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 25.00] Receiver: ACK 3 (seq 3) generated
+[t= 27.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 27.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 30.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 30.00] Receiver: ACK 4 (seq 4) generated
+[t= 32.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 32.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 35.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 35.00] Receiver: ACK 5 (seq 5) generated
+[t= 37.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 37.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 40.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 40.00] Receiver: ACK 6 (seq 6) generated
+[t= 42.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 42.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 45.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 45.00] Receiver: ACK 7 (seq 7) generated
+[t= 47.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 47.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 50.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 50.00] Receiver: ACK 8 (seq 0) generated
+[t= 52.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 52.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 55.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 55.00] Receiver: ACK 9 (seq 1) generated
+[t= 57.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 57.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Stop-and-Wait
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 11
+Total retransmissions         : 1
+Total frames discarded        : 0
+Data frames lost in channel   : 1
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 1
+Total simulated time          : 57 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 2 | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=[3], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) is out of order (expected seq 3) -> discarded
+[t=  8.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  9.00] Receiver: Frame 5 (seq 5) is out of order (expected seq 3) -> discarded
+[t=  9.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting outstanding frames 3..6 (go back to 3)
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) is out of order (expected seq 3) -> discarded
+[t= 10.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 10.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 12.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 13.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 13.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 14.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 14.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 15.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 15.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 15.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 16.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 16.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 17.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 18.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 18.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 18.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 19.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 19.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 20.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 20.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 20.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 21.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 22.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 22.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 14
+Total retransmissions         : 4
+Total frames discarded        : 3
+Data frames lost in channel   : 1
+ACKs generated / lost         : 13 / 0
+Timeouts                      : 1
+Total simulated time          : 22 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 2 | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=[3], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received out of order -> buffered (receiver window 3..6)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  9.00] Receiver: Frame 5 (seq 5) received out of order -> buffered (receiver window 3..6)
+[t=  9.00] Receiver: ACK 5 (seq 5) generated
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting only frame 3
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) received out of order -> buffered (receiver window 3..6)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 11.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 13.00] Receiver: ACK 3 (seq 3) generated
+[t= 13.00] Receiver: Delivered frame(s) 3..6 to the upper layer in order; receiver window slides to base 7
+[t= 15.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 15.00] Sender  : Window slides: base 3 -> 7
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 18.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 18.00] Receiver: ACK 7 (seq 7) generated
+[t= 18.00] Receiver: Delivered frame(s) 7 to the upper layer in order; receiver window slides to base 8
+[t= 19.00] Receiver: Frame 8 (seq 0) received successfully (in order)
+[t= 19.00] Receiver: ACK 8 (seq 0) generated
+[t= 19.00] Receiver: Delivered frame(s) 8 to the upper layer in order; receiver window slides to base 9
+[t= 20.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 20.00] Receiver: ACK 9 (seq 1) generated
+[t= 20.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 20.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 20.00] Sender  : Window slides: base 7 -> 8
+[t= 21.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 21.00] Sender  : Window slides: base 8 -> 9
+[t= 22.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 22.00] Sender  : Window slides: base 9 -> 10
+[t= 22.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 11
+Total retransmissions         : 1
+Total frames discarded        : 0
+Data frames lost in channel   : 1
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 1
+Total simulated time          : 22 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 3a - One ACK lost
+# ACK 5 is lost. GBN's cumulative ACK 6 makes up for it; SR and Stop-and-Wait must time out.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 3a | Stop-and-Wait | frames=10, m=3, Ws=1, Wr=1, lost frames=-, lost ACKs=[5]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Stop-and-Wait
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [5] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 18.00] Receiver: ACK 3 (seq 3) generated
+[t= 20.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 20.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 23.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 23.00] Receiver: ACK 4 (seq 4) generated
+[t= 25.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 25.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 28.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 28.00] Receiver: ACK 5 (seq 5) generated
+[t= 30.00] Channel : ACK 5 LOST in transit (never reaches the sender)
+[t= 32.00] Sender  : Timeout occurred for frame 5 -> frame or ACK lost, retransmitting the unacknowledged frame 5
+[t= 32.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 35.00] Receiver: Frame 5 (seq 5) is a duplicate (expected seq 6) -> discarded
+[t= 35.00] Receiver: ACK 5 (seq 5) generated (re-ACK for duplicate, original ACK was probably lost)
+[t= 37.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 37.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 40.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 40.00] Receiver: ACK 6 (seq 6) generated
+[t= 42.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 42.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 45.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 45.00] Receiver: ACK 7 (seq 7) generated
+[t= 47.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 47.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 50.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 50.00] Receiver: ACK 8 (seq 0) generated
+[t= 52.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 52.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 55.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 55.00] Receiver: ACK 9 (seq 1) generated
+[t= 57.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 57.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Stop-and-Wait
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 11
+Total retransmissions         : 1
+Total frames discarded        : 1
+Data frames lost in channel   : 0
+ACKs generated / lost         : 11 / 1
+Timeouts                      : 1
+Total simulated time          : 57 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 3a | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=-, lost ACKs=[5]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [5] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t=  6.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t=  8.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t=  8.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t=  8.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  9.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t=  9.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 10.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 10.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 10.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 10.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 11.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 11.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 11.00] Channel : ACK 5 LOST in transit (never reaches the sender)
+[t= 12.00] Sender  : ACK 6 received (cumulative) -> frames 5..6 acknowledged
+[t= 12.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 13.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 13.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 13.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 15.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 15.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 15.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 17.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 17.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 10
+Total retransmissions         : 0
+Total frames discarded        : 0
+Data frames lost in channel   : 0
+ACKs generated / lost         : 10 / 1
+Timeouts                      : 0
+Total simulated time          : 17 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 3a | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=-, lost ACKs=[5]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [5] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t=  6.00] Receiver: ACK 3 (seq 3) generated
+[t=  6.00] Receiver: Delivered frame(s) 3 to the upper layer in order; receiver window slides to base 4
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received successfully (in order)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  8.00] Receiver: Delivered frame(s) 4 to the upper layer in order; receiver window slides to base 5
+[t=  8.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t=  8.00] Sender  : Window slides: base 3 -> 4
+[t=  8.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  9.00] Receiver: Frame 5 (seq 5) received successfully (in order)
+[t=  9.00] Receiver: ACK 5 (seq 5) generated
+[t=  9.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 10.00] Receiver: Frame 6 (seq 6) received successfully (in order)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 10.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 10.00] Sender  : Window slides: base 4 -> 5
+[t= 10.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 11.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 11.00] Receiver: ACK 7 (seq 7) generated
+[t= 11.00] Receiver: Delivered frame(s) 7 to the upper layer in order; receiver window slides to base 8
+[t= 11.00] Channel : ACK 5 LOST in transit (never reaches the sender)
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 13.00] Sender  : Timeout occurred for frame 5 -> frame loss detected
+[t= 13.00] Sender  : Retransmitting only frame 5
+[t= 13.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 8 (seq 0) received successfully (in order)
+[t= 13.00] Receiver: ACK 8 (seq 0) generated
+[t= 13.00] Receiver: Delivered frame(s) 8 to the upper layer in order; receiver window slides to base 9
+[t= 13.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 15.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 16.00] Receiver: Frame 5 (seq 5) was already delivered -> duplicate discarded
+[t= 16.00] Receiver: ACK 5 (seq 5) generated (re-ACK, the earlier ACK was probably lost)
+[t= 18.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 18.00] Sender  : Window slides: base 5 -> 9
+[t= 18.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 21.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 21.00] Receiver: ACK 9 (seq 1) generated
+[t= 21.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 23.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 23.00] Sender  : Window slides: base 9 -> 10
+[t= 23.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 11
+Total retransmissions         : 1
+Total frames discarded        : 1
+Data frames lost in channel   : 0
+ACKs generated / lost         : 11 / 1
+Timeouts                      : 1
+Total simulated time          : 23 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 3b - The last ACK lost
+# ACK 9 is lost and no later ACK can cover it, so every protocol must time out and retransmit.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 3b | Stop-and-Wait | frames=10, m=3, Ws=1, Wr=1, lost frames=-, lost ACKs=[9]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Stop-and-Wait
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [9] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 18.00] Receiver: ACK 3 (seq 3) generated
+[t= 20.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 20.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 23.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 23.00] Receiver: ACK 4 (seq 4) generated
+[t= 25.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 25.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 28.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 28.00] Receiver: ACK 5 (seq 5) generated
+[t= 30.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 30.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 33.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 33.00] Receiver: ACK 6 (seq 6) generated
+[t= 35.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 35.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 38.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 38.00] Receiver: ACK 7 (seq 7) generated
+[t= 40.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 40.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 43.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 43.00] Receiver: ACK 8 (seq 0) generated
+[t= 45.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 45.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 48.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 48.00] Receiver: ACK 9 (seq 1) generated
+[t= 50.00] Channel : ACK 9 LOST in transit (never reaches the sender)
+[t= 52.00] Sender  : Timeout occurred for frame 9 -> frame or ACK lost, retransmitting the unacknowledged frame 9
+[t= 52.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 55.00] Receiver: Frame 9 (seq 1) is a duplicate (expected seq 2) -> discarded
+[t= 55.00] Receiver: ACK 9 (seq 1) generated (re-ACK for duplicate, original ACK was probably lost)
+[t= 57.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 57.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Stop-and-Wait
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 11
+Total retransmissions         : 1
+Total frames discarded        : 1
+Data frames lost in channel   : 0
+ACKs generated / lost         : 11 / 1
+Timeouts                      : 1
+Total simulated time          : 57 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 3b | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=-, lost ACKs=[9]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [9] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t=  6.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t=  8.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t=  8.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t=  8.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  9.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t=  9.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 10.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 10.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 10.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 10.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 11.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 11.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 11.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 11.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 12.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 13.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 13.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 13.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 14.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 14.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 15.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 16.00] Channel : ACK 9 LOST in transit (never reaches the sender)
+[t= 18.00] Sender  : Timeout occurred for frame 9 -> frame loss detected
+[t= 18.00] Sender  : Retransmitting outstanding frames 9..9 (go back to 9)
+[t= 18.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 21.00] Receiver: Frame 9 (seq 1) is duplicate (expected seq 2) -> discarded
+[t= 21.00] Receiver: ACK 9 (seq 1) generated (re-ACK of last in-order frame 9)
+[t= 23.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 23.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 11
+Total retransmissions         : 1
+Total frames discarded        : 1
+Data frames lost in channel   : 0
+ACKs generated / lost         : 11 / 1
+Timeouts                      : 1
+Total simulated time          : 23 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 3b | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=-, lost ACKs=[9]
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [9] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t=  6.00] Receiver: ACK 3 (seq 3) generated
+[t=  6.00] Receiver: Delivered frame(s) 3 to the upper layer in order; receiver window slides to base 4
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received successfully (in order)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  8.00] Receiver: Delivered frame(s) 4 to the upper layer in order; receiver window slides to base 5
+[t=  8.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t=  8.00] Sender  : Window slides: base 3 -> 4
+[t=  8.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  9.00] Receiver: Frame 5 (seq 5) received successfully (in order)
+[t=  9.00] Receiver: ACK 5 (seq 5) generated
+[t=  9.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 10.00] Receiver: Frame 6 (seq 6) received successfully (in order)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 10.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 10.00] Sender  : Window slides: base 4 -> 5
+[t= 10.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 11.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 11.00] Receiver: ACK 7 (seq 7) generated
+[t= 11.00] Receiver: Delivered frame(s) 7 to the upper layer in order; receiver window slides to base 8
+[t= 11.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 11.00] Sender  : Window slides: base 5 -> 6
+[t= 11.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 12.00] Sender  : Window slides: base 6 -> 7
+[t= 13.00] Receiver: Frame 8 (seq 0) received successfully (in order)
+[t= 13.00] Receiver: ACK 8 (seq 0) generated
+[t= 13.00] Receiver: Delivered frame(s) 8 to the upper layer in order; receiver window slides to base 9
+[t= 13.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 13.00] Sender  : Window slides: base 7 -> 8
+[t= 14.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 14.00] Receiver: ACK 9 (seq 1) generated
+[t= 14.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 15.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 15.00] Sender  : Window slides: base 8 -> 9
+[t= 16.00] Channel : ACK 9 LOST in transit (never reaches the sender)
+[t= 18.00] Sender  : Timeout occurred for frame 9 -> frame loss detected
+[t= 18.00] Sender  : Retransmitting only frame 9
+[t= 18.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 21.00] Receiver: Frame 9 (seq 1) was already delivered -> duplicate discarded
+[t= 21.00] Receiver: ACK 9 (seq 1) generated (re-ACK, the earlier ACK was probably lost)
+[t= 23.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 23.00] Sender  : Window slides: base 9 -> 10
+[t= 23.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 11
+Total retransmissions         : 1
+Total frames discarded        : 1
+Data frames lost in channel   : 0
+ACKs generated / lost         : 11 / 1
+Timeouts                      : 1
+Total simulated time          : 23 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 4 - Multiple consecutive data frames lost
+# Frames 3, 4 and 5 are lost one after another.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 4 | Stop-and-Wait | frames=10, m=3, Ws=1, Wr=1, lost frames=[3, 4, 5], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Stop-and-Wait
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 4, 5], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame or ACK lost, retransmitting the unacknowledged frame 3
+[t= 22.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 25.00] Receiver: ACK 3 (seq 3) generated
+[t= 27.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 27.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 30.00] Channel : Frame 4 LOST in transit (never reaches the receiver)
+[t= 34.00] Sender  : Timeout occurred for frame 4 -> frame or ACK lost, retransmitting the unacknowledged frame 4
+[t= 34.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 37.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 37.00] Receiver: ACK 4 (seq 4) generated
+[t= 39.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 39.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 42.00] Channel : Frame 5 LOST in transit (never reaches the receiver)
+[t= 46.00] Sender  : Timeout occurred for frame 5 -> frame or ACK lost, retransmitting the unacknowledged frame 5
+[t= 46.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 49.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 49.00] Receiver: ACK 5 (seq 5) generated
+[t= 51.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 51.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 54.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 54.00] Receiver: ACK 6 (seq 6) generated
+[t= 56.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 56.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 59.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 59.00] Receiver: ACK 7 (seq 7) generated
+[t= 61.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 61.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 64.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 64.00] Receiver: ACK 8 (seq 0) generated
+[t= 66.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 66.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 69.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 69.00] Receiver: ACK 9 (seq 1) generated
+[t= 71.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 71.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Stop-and-Wait
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 13
+Total retransmissions         : 3
+Total frames discarded        : 0
+Data frames lost in channel   : 3
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 3
+Total simulated time          : 71 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 4 | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=[3, 4, 5], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 4, 5], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Channel : Frame 4 LOST in transit (never reaches the receiver)
+[t=  9.00] Channel : Frame 5 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting outstanding frames 3..6 (go back to 3)
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) is out of order (expected seq 3) -> discarded
+[t= 10.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 11.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 12.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 13.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 13.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 14.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 14.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 15.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 15.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 15.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 16.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 16.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 17.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 18.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 18.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 18.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 19.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 19.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 20.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 20.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 20.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 21.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 22.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 22.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 14
+Total retransmissions         : 4
+Total frames discarded        : 1
+Data frames lost in channel   : 3
+ACKs generated / lost         : 11 / 0
+Timeouts                      : 1
+Total simulated time          : 22 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 4 | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=[3, 4, 5], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 4, 5], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Channel : Frame 4 LOST in transit (never reaches the receiver)
+[t=  9.00] Channel : Frame 5 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting only frame 3
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) received out of order -> buffered (receiver window 3..6)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 12.00] Sender  : Timeout occurred for frame 4 -> frame loss detected
+[t= 12.00] Sender  : Retransmitting only frame 4
+[t= 12.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 13.00] Sender  : Timeout occurred for frame 5 -> frame loss detected
+[t= 13.00] Sender  : Retransmitting only frame 5
+[t= 13.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 13.00] Receiver: ACK 3 (seq 3) generated
+[t= 13.00] Receiver: Delivered frame(s) 3 to the upper layer in order; receiver window slides to base 4
+[t= 15.00] Receiver: Frame 4 (seq 4) received successfully (in order)
+[t= 15.00] Receiver: ACK 4 (seq 4) generated
+[t= 15.00] Receiver: Delivered frame(s) 4 to the upper layer in order; receiver window slides to base 5
+[t= 15.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 15.00] Sender  : Window slides: base 3 -> 4
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Receiver: Frame 5 (seq 5) received successfully (in order)
+[t= 16.00] Receiver: ACK 5 (seq 5) generated
+[t= 16.00] Receiver: Delivered frame(s) 5..6 to the upper layer in order; receiver window slides to base 7
+[t= 17.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 17.00] Sender  : Window slides: base 4 -> 5
+[t= 17.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 18.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 18.00] Receiver: ACK 7 (seq 7) generated
+[t= 18.00] Receiver: Delivered frame(s) 7 to the upper layer in order; receiver window slides to base 8
+[t= 18.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 18.00] Sender  : Window slides: base 5 -> 7
+[t= 18.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 20.00] Receiver: Frame 8 (seq 0) received successfully (in order)
+[t= 20.00] Receiver: ACK 8 (seq 0) generated
+[t= 20.00] Receiver: Delivered frame(s) 8 to the upper layer in order; receiver window slides to base 9
+[t= 20.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 20.00] Sender  : Window slides: base 7 -> 8
+[t= 21.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 21.00] Receiver: ACK 9 (seq 1) generated
+[t= 21.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 22.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 22.00] Sender  : Window slides: base 8 -> 9
+[t= 23.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 23.00] Sender  : Window slides: base 9 -> 10
+[t= 23.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 13
+Total retransmissions         : 3
+Total frames discarded        : 0
+Data frames lost in channel   : 3
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 3
+Total simulated time          : 23 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 5 - Different sender window sizes for GBN and SR
+# Frames 3 and 7 lost, m = 3. GBN windows 1, 2, 4, 7 (max 2^m - 1 = 7); SR windows 1, 2, 4 (max 2^(m-1) = 4); Stop-and-Wait shown for reference. The last row uses a receiver window smaller than the sender window.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 5 | Stop-and-Wait | frames=10, m=3, Ws=1, Wr=1, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Stop-and-Wait
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame or ACK lost, retransmitting the unacknowledged frame 3
+[t= 22.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 25.00] Receiver: ACK 3 (seq 3) generated
+[t= 27.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 27.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 30.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 30.00] Receiver: ACK 4 (seq 4) generated
+[t= 32.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 32.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 35.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 35.00] Receiver: ACK 5 (seq 5) generated
+[t= 37.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 37.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 40.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 40.00] Receiver: ACK 6 (seq 6) generated
+[t= 42.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 42.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 45.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 49.00] Sender  : Timeout occurred for frame 7 -> frame or ACK lost, retransmitting the unacknowledged frame 7
+[t= 49.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 52.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 52.00] Receiver: ACK 7 (seq 7) generated
+[t= 54.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 54.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 57.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 57.00] Receiver: ACK 8 (seq 0) generated
+[t= 59.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 59.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 62.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 62.00] Receiver: ACK 9 (seq 1) generated
+[t= 64.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 64.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Stop-and-Wait
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 64 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Go-Back-N | frames=10, m=3, Ws=1, Wr=1, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t= 10.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t= 15.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting outstanding frames 3..3 (go back to 3)
+[t= 22.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 25.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 27.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 27.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 30.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 30.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 32.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 32.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 35.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 35.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 37.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 37.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 40.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 40.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 42.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 42.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 45.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 49.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 49.00] Sender  : Retransmitting outstanding frames 7..7 (go back to 7)
+[t= 49.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 52.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 52.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 54.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 54.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 57.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 57.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 59.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 59.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 62.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 62.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 64.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 64.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 64 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Go-Back-N | frames=10, m=3, Ws=2, Wr=1, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 2 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  8.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  8.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  9.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t= 10.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 13.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 13.00] Sender  : Retransmitting outstanding frames 3..4 (go back to 3)
+[t= 13.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 4 (seq 4) is out of order (expected seq 3) -> discarded
+[t= 13.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 14.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 15.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 16.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 16.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 17.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 17.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 18.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 18.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 19.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 19.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 21.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 21.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 22.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 22.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 23.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 23.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 24.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 24.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 26.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 27.00] Receiver: Frame 8 (seq 0) is out of order (expected seq 7) -> discarded
+[t= 27.00] Receiver: ACK 6 (seq 6) generated (re-ACK of last in-order frame 6)
+[t= 29.00] Sender  : ACK 6 (seq 6) received -> duplicate, ignored
+[t= 30.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 30.00] Sender  : Retransmitting outstanding frames 7..8 (go back to 7)
+[t= 30.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 31.00] Sender  : Frame 8 (seq 0) retransmitted (attempt 2)
+[t= 33.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 33.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 34.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 34.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 35.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 35.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 36.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 38.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 38.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 40.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 40.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 14
+Total retransmissions         : 4
+Total frames discarded        : 2
+Data frames lost in channel   : 2
+ACKs generated / lost         : 12 / 0
+Timeouts                      : 2
+Total simulated time          : 40 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) is out of order (expected seq 3) -> discarded
+[t=  8.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  9.00] Receiver: Frame 5 (seq 5) is out of order (expected seq 3) -> discarded
+[t=  9.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting outstanding frames 3..6 (go back to 3)
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) is out of order (expected seq 3) -> discarded
+[t= 10.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 10.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 12.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 13.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 13.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 14.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 14.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 15.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 15.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 15.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 16.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 16.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 17.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 18.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 18.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 19.00] Receiver: Frame 8 (seq 0) is out of order (expected seq 7) -> discarded
+[t= 19.00] Receiver: ACK 6 (seq 6) generated (re-ACK of last in-order frame 6)
+[t= 20.00] Receiver: Frame 9 (seq 1) is out of order (expected seq 7) -> discarded
+[t= 20.00] Receiver: ACK 6 (seq 6) generated (re-ACK of last in-order frame 6)
+[t= 21.00] Sender  : ACK 6 (seq 6) received -> duplicate, ignored
+[t= 22.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting outstanding frames 7..9 (go back to 7)
+[t= 22.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 22.00] Sender  : ACK 6 (seq 6) received -> duplicate, ignored
+[t= 23.00] Sender  : Frame 8 (seq 0) retransmitted (attempt 2)
+[t= 24.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 25.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 26.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 26.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 27.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 27.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 27.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 28.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 29.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 29.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 17
+Total retransmissions         : 7
+Total frames discarded        : 5
+Data frames lost in channel   : 2
+ACKs generated / lost         : 15 / 0
+Timeouts                      : 2
+Total simulated time          : 29 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Go-Back-N | frames=10, m=3, Ws=7, Wr=1, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 7 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  4.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  7.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  7.00] Receiver: Frame 4 (seq 4) is out of order (expected seq 3) -> discarded
+[t=  7.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  8.00] Receiver: Frame 5 (seq 5) is out of order (expected seq 3) -> discarded
+[t=  8.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  8.00] Sender  : Frame 8 (seq 0) transmitted
+[t=  9.00] Receiver: Frame 6 (seq 6) is out of order (expected seq 3) -> discarded
+[t=  9.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  9.00] Sender  : Frame 9 (seq 1) transmitted
+[t=  9.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 10.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting outstanding frames 3..9 (go back to 3)
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Receiver: Frame 8 (seq 0) is out of order (expected seq 3) -> discarded
+[t= 11.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 11.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 11.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Receiver: Frame 9 (seq 1) is out of order (expected seq 3) -> discarded
+[t= 12.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 12.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 13.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 13.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 13.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 14.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 14.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 14.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 14.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 15.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 15.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 15.00] Sender  : Frame 8 (seq 0) retransmitted (attempt 2)
+[t= 15.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 16.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 16.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 16.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 16.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 17.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 17.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 17.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 18.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 18.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 18.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 19.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 19.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 19.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 20.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 21.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 21.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 17
+Total retransmissions         : 7
+Total frames discarded        : 5
+Data frames lost in channel   : 2
+ACKs generated / lost         : 15 / 0
+Timeouts                      : 1
+Total simulated time          : 21 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Selective Repeat | frames=10, m=3, Ws=1, Wr=1, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t=  8.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Window slides: base 1 -> 2
+[t= 10.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t= 13.00] Receiver: ACK 2 (seq 2) generated
+[t= 13.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Window slides: base 2 -> 3
+[t= 15.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting only frame 3
+[t= 22.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 25.00] Receiver: ACK 3 (seq 3) generated
+[t= 25.00] Receiver: Delivered frame(s) 3 to the upper layer in order; receiver window slides to base 4
+[t= 27.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 27.00] Sender  : Window slides: base 3 -> 4
+[t= 27.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 30.00] Receiver: Frame 4 (seq 4) received successfully (in order)
+[t= 30.00] Receiver: ACK 4 (seq 4) generated
+[t= 30.00] Receiver: Delivered frame(s) 4 to the upper layer in order; receiver window slides to base 5
+[t= 32.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 32.00] Sender  : Window slides: base 4 -> 5
+[t= 32.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 35.00] Receiver: Frame 5 (seq 5) received successfully (in order)
+[t= 35.00] Receiver: ACK 5 (seq 5) generated
+[t= 35.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 37.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 37.00] Sender  : Window slides: base 5 -> 6
+[t= 37.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 40.00] Receiver: Frame 6 (seq 6) received successfully (in order)
+[t= 40.00] Receiver: ACK 6 (seq 6) generated
+[t= 40.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 42.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 42.00] Sender  : Window slides: base 6 -> 7
+[t= 42.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 45.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 49.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 49.00] Sender  : Retransmitting only frame 7
+[t= 49.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 52.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 52.00] Receiver: ACK 7 (seq 7) generated
+[t= 52.00] Receiver: Delivered frame(s) 7 to the upper layer in order; receiver window slides to base 8
+[t= 54.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 54.00] Sender  : Window slides: base 7 -> 8
+[t= 54.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 57.00] Receiver: Frame 8 (seq 0) received successfully (in order)
+[t= 57.00] Receiver: ACK 8 (seq 0) generated
+[t= 57.00] Receiver: Delivered frame(s) 8 to the upper layer in order; receiver window slides to base 9
+[t= 59.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 59.00] Sender  : Window slides: base 8 -> 9
+[t= 59.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 62.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 62.00] Receiver: ACK 9 (seq 1) generated
+[t= 62.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 64.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 64.00] Sender  : Window slides: base 9 -> 10
+[t= 64.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 64 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Selective Repeat | frames=10, m=3, Ws=2, Wr=2, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 2 | receiver window: 2
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  8.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  8.00] Receiver: ACK 2 (seq 2) generated
+[t=  8.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  9.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 10.00] Sender  : Window slides: base 2 -> 3
+[t= 10.00] Sender  : Frame 4 (seq 4) transmitted
+[t= 13.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 13.00] Sender  : Retransmitting only frame 3
+[t= 13.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 4 (seq 4) received out of order -> buffered (receiver window 3..4)
+[t= 13.00] Receiver: ACK 4 (seq 4) generated
+[t= 15.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 16.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 16.00] Receiver: ACK 3 (seq 3) generated
+[t= 16.00] Receiver: Delivered frame(s) 3..4 to the upper layer in order; receiver window slides to base 5
+[t= 18.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 18.00] Sender  : Window slides: base 3 -> 5
+[t= 18.00] Sender  : Frame 5 (seq 5) transmitted
+[t= 19.00] Sender  : Frame 6 (seq 6) transmitted
+[t= 21.00] Receiver: Frame 5 (seq 5) received successfully (in order)
+[t= 21.00] Receiver: ACK 5 (seq 5) generated
+[t= 21.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 22.00] Receiver: Frame 6 (seq 6) received successfully (in order)
+[t= 22.00] Receiver: ACK 6 (seq 6) generated
+[t= 22.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 23.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 23.00] Sender  : Window slides: base 5 -> 6
+[t= 23.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 24.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 24.00] Sender  : Window slides: base 6 -> 7
+[t= 24.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 26.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 27.00] Receiver: Frame 8 (seq 0) received out of order -> buffered (receiver window 7..8)
+[t= 27.00] Receiver: ACK 8 (seq 0) generated
+[t= 29.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 30.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 30.00] Sender  : Retransmitting only frame 7
+[t= 30.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 33.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 33.00] Receiver: ACK 7 (seq 7) generated
+[t= 33.00] Receiver: Delivered frame(s) 7..8 to the upper layer in order; receiver window slides to base 9
+[t= 35.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 35.00] Sender  : Window slides: base 7 -> 9
+[t= 35.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 38.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 38.00] Receiver: ACK 9 (seq 1) generated
+[t= 38.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 40.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 40.00] Sender  : Window slides: base 9 -> 10
+[t= 40.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 40 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=[3, 7], lost ACKs=-
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received out of order -> buffered (receiver window 3..6)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  9.00] Receiver: Frame 5 (seq 5) received out of order -> buffered (receiver window 3..6)
+[t=  9.00] Receiver: ACK 5 (seq 5) generated
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting only frame 3
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) received out of order -> buffered (receiver window 3..6)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 11.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 13.00] Receiver: ACK 3 (seq 3) generated
+[t= 13.00] Receiver: Delivered frame(s) 3..6 to the upper layer in order; receiver window slides to base 7
+[t= 15.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 15.00] Sender  : Window slides: base 3 -> 7
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 18.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 19.00] Receiver: Frame 8 (seq 0) received out of order -> buffered (receiver window 7..10)
+[t= 19.00] Receiver: ACK 8 (seq 0) generated
+[t= 20.00] Receiver: Frame 9 (seq 1) received out of order -> buffered (receiver window 7..10)
+[t= 20.00] Receiver: ACK 9 (seq 1) generated
+[t= 21.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 22.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting only frame 7
+[t= 22.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 22.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 25.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 25.00] Receiver: ACK 7 (seq 7) generated
+[t= 25.00] Receiver: Delivered frame(s) 7..9 to the upper layer in order; receiver window slides to base 10
+[t= 27.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 27.00] Sender  : Window slides: base 7 -> 10
+[t= 27.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 27 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 5 | Selective Repeat | frames=10, m=3, Ws=4, Wr=2, lost frames=[3, 7], lost ACKs=-
+Note: Wr < Ws: frames beyond the receiver window are discarded and resent
+------------------------------------------------------------------------------
+Warning: Receiver window is smaller than the sender window: frames beyond the receiver window will be discarded and retransmitted.
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 2
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received out of order -> buffered (receiver window 3..4)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  9.00] Receiver: Frame 5 (seq 5) is outside the receiver window -> discarded
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting only frame 3
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) is outside the receiver window -> discarded
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 13.00] Sender  : Timeout occurred for frame 5 -> frame loss detected
+[t= 13.00] Sender  : Retransmitting only frame 5
+[t= 13.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 13.00] Receiver: ACK 3 (seq 3) generated
+[t= 13.00] Receiver: Delivered frame(s) 3..4 to the upper layer in order; receiver window slides to base 5
+[t= 14.00] Sender  : Timeout occurred for frame 6 -> frame loss detected
+[t= 14.00] Sender  : Retransmitting only frame 6
+[t= 14.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 15.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 15.00] Sender  : Window slides: base 3 -> 5
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Receiver: Frame 5 (seq 5) received successfully (in order)
+[t= 16.00] Receiver: ACK 5 (seq 5) generated
+[t= 16.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Receiver: Frame 6 (seq 6) received successfully (in order)
+[t= 17.00] Receiver: ACK 6 (seq 6) generated
+[t= 17.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 18.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 18.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 18.00] Sender  : Window slides: base 5 -> 6
+[t= 18.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 19.00] Receiver: Frame 8 (seq 0) received out of order -> buffered (receiver window 7..8)
+[t= 19.00] Receiver: ACK 8 (seq 0) generated
+[t= 19.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 19.00] Sender  : Window slides: base 6 -> 7
+[t= 21.00] Receiver: Frame 9 (seq 1) is outside the receiver window -> discarded
+[t= 21.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 22.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting only frame 7
+[t= 22.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 25.00] Sender  : Timeout occurred for frame 9 -> frame loss detected
+[t= 25.00] Sender  : Retransmitting only frame 9
+[t= 25.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 25.00] Receiver: ACK 7 (seq 7) generated
+[t= 25.00] Receiver: Delivered frame(s) 7..8 to the upper layer in order; receiver window slides to base 9
+[t= 27.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 27.00] Sender  : Window slides: base 7 -> 9
+[t= 28.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 28.00] Receiver: ACK 9 (seq 1) generated
+[t= 28.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 30.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 30.00] Sender  : Window slides: base 9 -> 10
+[t= 30.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 15
+Total retransmissions         : 5
+Total frames discarded        : 3
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 5
+Total simulated time          : 30 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 6 - Different sequence number bit lengths
+# Frames 3 and 7 lost. For m = 1..4 each protocol uses the largest window its sequence space allows: the number of bits caps the window, and therefore the throughput.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 6 | Go-Back-N | frames=10, m=1, Ws=1, Wr=1, lost frames=[3, 7], lost ACKs=-
+Note: m=1, largest legal GBN window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 1 (sequence numbers 0..1) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  8.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t= 10.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t= 10.00] Sender  : Frame 2 (seq 0) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 0) received successfully -> delivered
+[t= 13.00] Receiver: ACK 2 (seq 0) generated (cumulative: frames up to 2 received)
+[t= 15.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t= 15.00] Sender  : Frame 3 (seq 1) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting outstanding frames 3..3 (go back to 3)
+[t= 22.00] Sender  : Frame 3 (seq 1) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 1) received successfully -> delivered
+[t= 25.00] Receiver: ACK 3 (seq 1) generated (cumulative: frames up to 3 received)
+[t= 27.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 27.00] Sender  : Frame 4 (seq 0) transmitted
+[t= 30.00] Receiver: Frame 4 (seq 0) received successfully -> delivered
+[t= 30.00] Receiver: ACK 4 (seq 0) generated (cumulative: frames up to 4 received)
+[t= 32.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 32.00] Sender  : Frame 5 (seq 1) transmitted
+[t= 35.00] Receiver: Frame 5 (seq 1) received successfully -> delivered
+[t= 35.00] Receiver: ACK 5 (seq 1) generated (cumulative: frames up to 5 received)
+[t= 37.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 37.00] Sender  : Frame 6 (seq 0) transmitted
+[t= 40.00] Receiver: Frame 6 (seq 0) received successfully -> delivered
+[t= 40.00] Receiver: ACK 6 (seq 0) generated (cumulative: frames up to 6 received)
+[t= 42.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 42.00] Sender  : Frame 7 (seq 1) transmitted
+[t= 45.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 49.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 49.00] Sender  : Retransmitting outstanding frames 7..7 (go back to 7)
+[t= 49.00] Sender  : Frame 7 (seq 1) retransmitted (attempt 2)
+[t= 52.00] Receiver: Frame 7 (seq 1) received successfully -> delivered
+[t= 52.00] Receiver: ACK 7 (seq 1) generated (cumulative: frames up to 7 received)
+[t= 54.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 54.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 57.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 57.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 59.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 59.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 62.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 62.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 64.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 64.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 64 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 6 | Selective Repeat | frames=10, m=1, Ws=1, Wr=1, lost frames=[3, 7], lost ACKs=-
+Note: m=1, largest legal SR window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 1 (sequence numbers 0..1) | sender window: 1 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  8.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  8.00] Receiver: ACK 1 (seq 1) generated
+[t=  8.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t= 10.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 10.00] Sender  : Window slides: base 1 -> 2
+[t= 10.00] Sender  : Frame 2 (seq 0) transmitted
+[t= 13.00] Receiver: Frame 2 (seq 0) received successfully (in order)
+[t= 13.00] Receiver: ACK 2 (seq 0) generated
+[t= 13.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t= 15.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 15.00] Sender  : Window slides: base 2 -> 3
+[t= 15.00] Sender  : Frame 3 (seq 1) transmitted
+[t= 18.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 22.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting only frame 3
+[t= 22.00] Sender  : Frame 3 (seq 1) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 3 (seq 1) received successfully (in order)
+[t= 25.00] Receiver: ACK 3 (seq 1) generated
+[t= 25.00] Receiver: Delivered frame(s) 3 to the upper layer in order; receiver window slides to base 4
+[t= 27.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 27.00] Sender  : Window slides: base 3 -> 4
+[t= 27.00] Sender  : Frame 4 (seq 0) transmitted
+[t= 30.00] Receiver: Frame 4 (seq 0) received successfully (in order)
+[t= 30.00] Receiver: ACK 4 (seq 0) generated
+[t= 30.00] Receiver: Delivered frame(s) 4 to the upper layer in order; receiver window slides to base 5
+[t= 32.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 32.00] Sender  : Window slides: base 4 -> 5
+[t= 32.00] Sender  : Frame 5 (seq 1) transmitted
+[t= 35.00] Receiver: Frame 5 (seq 1) received successfully (in order)
+[t= 35.00] Receiver: ACK 5 (seq 1) generated
+[t= 35.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 37.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 37.00] Sender  : Window slides: base 5 -> 6
+[t= 37.00] Sender  : Frame 6 (seq 0) transmitted
+[t= 40.00] Receiver: Frame 6 (seq 0) received successfully (in order)
+[t= 40.00] Receiver: ACK 6 (seq 0) generated
+[t= 40.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 42.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 42.00] Sender  : Window slides: base 6 -> 7
+[t= 42.00] Sender  : Frame 7 (seq 1) transmitted
+[t= 45.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 49.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 49.00] Sender  : Retransmitting only frame 7
+[t= 49.00] Sender  : Frame 7 (seq 1) retransmitted (attempt 2)
+[t= 52.00] Receiver: Frame 7 (seq 1) received successfully (in order)
+[t= 52.00] Receiver: ACK 7 (seq 1) generated
+[t= 52.00] Receiver: Delivered frame(s) 7 to the upper layer in order; receiver window slides to base 8
+[t= 54.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 54.00] Sender  : Window slides: base 7 -> 8
+[t= 54.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 57.00] Receiver: Frame 8 (seq 0) received successfully (in order)
+[t= 57.00] Receiver: ACK 8 (seq 0) generated
+[t= 57.00] Receiver: Delivered frame(s) 8 to the upper layer in order; receiver window slides to base 9
+[t= 59.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 59.00] Sender  : Window slides: base 8 -> 9
+[t= 59.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 62.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 62.00] Receiver: ACK 9 (seq 1) generated
+[t= 62.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 64.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 64.00] Sender  : Window slides: base 9 -> 10
+[t= 64.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 64 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 6 | Go-Back-N | frames=10, m=2, Ws=3, Wr=1, lost frames=[3, 7], lost ACKs=-
+Note: m=2, largest legal GBN window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 2 (sequence numbers 0..3) | sender window: 3 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  5.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  6.00] Sender  : Frame 4 (seq 0) transmitted
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  7.00] Sender  : Frame 5 (seq 1) transmitted
+[t=  8.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  9.00] Receiver: Frame 4 (seq 0) is out of order (expected seq 3) -> discarded
+[t=  9.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 10.00] Receiver: Frame 5 (seq 1) is out of order (expected seq 3) -> discarded
+[t= 10.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 11.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 12.00] Sender  : Retransmitting outstanding frames 3..5 (go back to 3)
+[t= 12.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 12.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 13.00] Sender  : Frame 4 (seq 0) retransmitted (attempt 2)
+[t= 14.00] Sender  : Frame 5 (seq 1) retransmitted (attempt 2)
+[t= 15.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 15.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 16.00] Receiver: Frame 4 (seq 0) received successfully -> delivered
+[t= 16.00] Receiver: ACK 4 (seq 0) generated (cumulative: frames up to 4 received)
+[t= 17.00] Receiver: Frame 5 (seq 1) received successfully -> delivered
+[t= 17.00] Receiver: ACK 5 (seq 1) generated (cumulative: frames up to 5 received)
+[t= 17.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 17.00] Sender  : Frame 6 (seq 2) transmitted
+[t= 18.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 18.00] Sender  : Frame 7 (seq 3) transmitted
+[t= 19.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 19.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 20.00] Receiver: Frame 6 (seq 2) received successfully -> delivered
+[t= 20.00] Receiver: ACK 6 (seq 2) generated (cumulative: frames up to 6 received)
+[t= 21.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 22.00] Receiver: Frame 8 (seq 0) is out of order (expected seq 3) -> discarded
+[t= 22.00] Receiver: ACK 6 (seq 2) generated (re-ACK of last in-order frame 6)
+[t= 22.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 22.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 24.00] Sender  : ACK 6 (seq 2) received -> duplicate, ignored
+[t= 25.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 25.00] Sender  : Retransmitting outstanding frames 7..9 (go back to 7)
+[t= 25.00] Sender  : Frame 7 (seq 3) retransmitted (attempt 2)
+[t= 25.00] Receiver: Frame 9 (seq 1) is out of order (expected seq 3) -> discarded
+[t= 25.00] Receiver: ACK 6 (seq 2) generated (re-ACK of last in-order frame 6)
+[t= 26.00] Sender  : Frame 8 (seq 0) retransmitted (attempt 2)
+[t= 27.00] Sender  : ACK 6 (seq 2) received -> duplicate, ignored
+[t= 27.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 28.00] Receiver: Frame 7 (seq 3) received successfully -> delivered
+[t= 28.00] Receiver: ACK 7 (seq 3) generated (cumulative: frames up to 7 received)
+[t= 29.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 29.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 30.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 30.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 30.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 31.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 32.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 32.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 16
+Total retransmissions         : 6
+Total frames discarded        : 4
+Data frames lost in channel   : 2
+ACKs generated / lost         : 14 / 0
+Timeouts                      : 2
+Total simulated time          : 32 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 6 | Selective Repeat | frames=10, m=2, Ws=2, Wr=2, lost frames=[3, 7], lost ACKs=-
+Note: m=2, largest legal SR window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 2 (sequence numbers 0..3) | sender window: 2 | receiver window: 2
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  8.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  8.00] Receiver: ACK 2 (seq 2) generated
+[t=  8.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  9.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 10.00] Sender  : Window slides: base 2 -> 3
+[t= 10.00] Sender  : Frame 4 (seq 0) transmitted
+[t= 13.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 13.00] Sender  : Retransmitting only frame 3
+[t= 13.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 4 (seq 0) received out of order -> buffered (receiver window 3..4)
+[t= 13.00] Receiver: ACK 4 (seq 0) generated
+[t= 15.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 16.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 16.00] Receiver: ACK 3 (seq 3) generated
+[t= 16.00] Receiver: Delivered frame(s) 3..4 to the upper layer in order; receiver window slides to base 5
+[t= 18.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 18.00] Sender  : Window slides: base 3 -> 5
+[t= 18.00] Sender  : Frame 5 (seq 1) transmitted
+[t= 19.00] Sender  : Frame 6 (seq 2) transmitted
+[t= 21.00] Receiver: Frame 5 (seq 1) received successfully (in order)
+[t= 21.00] Receiver: ACK 5 (seq 1) generated
+[t= 21.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 22.00] Receiver: Frame 6 (seq 2) received successfully (in order)
+[t= 22.00] Receiver: ACK 6 (seq 2) generated
+[t= 22.00] Receiver: Delivered frame(s) 6 to the upper layer in order; receiver window slides to base 7
+[t= 23.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 23.00] Sender  : Window slides: base 5 -> 6
+[t= 23.00] Sender  : Frame 7 (seq 3) transmitted
+[t= 24.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 24.00] Sender  : Window slides: base 6 -> 7
+[t= 24.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 26.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 27.00] Receiver: Frame 8 (seq 0) received out of order -> buffered (receiver window 7..8)
+[t= 27.00] Receiver: ACK 8 (seq 0) generated
+[t= 29.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 30.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 30.00] Sender  : Retransmitting only frame 7
+[t= 30.00] Sender  : Frame 7 (seq 3) retransmitted (attempt 2)
+[t= 33.00] Receiver: Frame 7 (seq 3) received successfully (in order)
+[t= 33.00] Receiver: ACK 7 (seq 3) generated
+[t= 33.00] Receiver: Delivered frame(s) 7..8 to the upper layer in order; receiver window slides to base 9
+[t= 35.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 35.00] Sender  : Window slides: base 7 -> 9
+[t= 35.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 38.00] Receiver: Frame 9 (seq 1) received successfully (in order)
+[t= 38.00] Receiver: ACK 9 (seq 1) generated
+[t= 38.00] Receiver: Delivered frame(s) 9 to the upper layer in order; receiver window slides to base 10
+[t= 40.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 40.00] Sender  : Window slides: base 9 -> 10
+[t= 40.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 40 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 6 | Go-Back-N | frames=10, m=3, Ws=7, Wr=1, lost frames=[3, 7], lost ACKs=-
+Note: m=3, largest legal GBN window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 7 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  4.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  7.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  7.00] Receiver: Frame 4 (seq 4) is out of order (expected seq 3) -> discarded
+[t=  7.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  8.00] Receiver: Frame 5 (seq 5) is out of order (expected seq 3) -> discarded
+[t=  8.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  8.00] Sender  : Frame 8 (seq 0) transmitted
+[t=  9.00] Receiver: Frame 6 (seq 6) is out of order (expected seq 3) -> discarded
+[t=  9.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  9.00] Sender  : Frame 9 (seq 1) transmitted
+[t=  9.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 10.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting outstanding frames 3..9 (go back to 3)
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Receiver: Frame 8 (seq 0) is out of order (expected seq 3) -> discarded
+[t= 11.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 11.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 11.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Receiver: Frame 9 (seq 1) is out of order (expected seq 3) -> discarded
+[t= 12.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 12.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 13.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 13.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 13.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 14.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 14.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 14.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 14.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 15.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 15.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 15.00] Sender  : Frame 8 (seq 0) retransmitted (attempt 2)
+[t= 15.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 16.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 16.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 16.00] Sender  : Frame 9 (seq 1) retransmitted (attempt 2)
+[t= 16.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 17.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 17.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 17.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 18.00] Receiver: Frame 8 (seq 0) received successfully -> delivered
+[t= 18.00] Receiver: ACK 8 (seq 0) generated (cumulative: frames up to 8 received)
+[t= 18.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 19.00] Receiver: Frame 9 (seq 1) received successfully -> delivered
+[t= 19.00] Receiver: ACK 9 (seq 1) generated (cumulative: frames up to 9 received)
+[t= 19.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 20.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 21.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 21.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 17
+Total retransmissions         : 7
+Total frames discarded        : 5
+Data frames lost in channel   : 2
+ACKs generated / lost         : 15 / 0
+Timeouts                      : 1
+Total simulated time          : 21 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 6 | Selective Repeat | frames=10, m=3, Ws=4, Wr=4, lost frames=[3, 7], lost ACKs=-
+Note: m=3, largest legal SR window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 3 (sequence numbers 0..7) | sender window: 4 | receiver window: 4
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  5.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  6.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  7.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  8.00] Receiver: Frame 4 (seq 4) received out of order -> buffered (receiver window 3..6)
+[t=  8.00] Receiver: ACK 4 (seq 4) generated
+[t=  9.00] Receiver: Frame 5 (seq 5) received out of order -> buffered (receiver window 3..6)
+[t=  9.00] Receiver: ACK 5 (seq 5) generated
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting only frame 3
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 6 (seq 6) received out of order -> buffered (receiver window 3..6)
+[t= 10.00] Receiver: ACK 6 (seq 6) generated
+[t= 10.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 11.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 12.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 13.00] Receiver: ACK 3 (seq 3) generated
+[t= 13.00] Receiver: Delivered frame(s) 3..6 to the upper layer in order; receiver window slides to base 7
+[t= 15.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 15.00] Sender  : Window slides: base 3 -> 7
+[t= 15.00] Sender  : Frame 7 (seq 7) transmitted
+[t= 16.00] Sender  : Frame 8 (seq 0) transmitted
+[t= 17.00] Sender  : Frame 9 (seq 1) transmitted
+[t= 18.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 19.00] Receiver: Frame 8 (seq 0) received out of order -> buffered (receiver window 7..10)
+[t= 19.00] Receiver: ACK 8 (seq 0) generated
+[t= 20.00] Receiver: Frame 9 (seq 1) received out of order -> buffered (receiver window 7..10)
+[t= 20.00] Receiver: ACK 9 (seq 1) generated
+[t= 21.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 22.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 22.00] Sender  : Retransmitting only frame 7
+[t= 22.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 22.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 25.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 25.00] Receiver: ACK 7 (seq 7) generated
+[t= 25.00] Receiver: Delivered frame(s) 7..9 to the upper layer in order; receiver window slides to base 10
+[t= 27.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 27.00] Sender  : Window slides: base 7 -> 10
+[t= 27.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 27 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 6 | Go-Back-N | frames=10, m=4, Ws=15, Wr=1, lost frames=[3, 7], lost ACKs=-
+Note: m=4, largest legal GBN window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Go-Back-N
+Frames: 10 | sequence bits: 4 (sequence numbers 0..15) | sender window: 15 | receiver window: 1
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully -> delivered
+[t=  3.00] Receiver: ACK 0 (seq 0) generated (cumulative: frames up to 0 received)
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully -> delivered
+[t=  4.00] Receiver: ACK 1 (seq 1) generated (cumulative: frames up to 1 received)
+[t=  4.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully -> delivered
+[t=  5.00] Receiver: ACK 2 (seq 2) generated (cumulative: frames up to 2 received)
+[t=  5.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  5.00] Sender  : ACK 0 received (cumulative) -> frames 0..0 acknowledged
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  6.00] Sender  : ACK 1 received (cumulative) -> frames 1..1 acknowledged
+[t=  7.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  7.00] Receiver: Frame 4 (seq 4) is out of order (expected seq 3) -> discarded
+[t=  7.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  7.00] Sender  : ACK 2 received (cumulative) -> frames 2..2 acknowledged
+[t=  8.00] Receiver: Frame 5 (seq 5) is out of order (expected seq 3) -> discarded
+[t=  8.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  8.00] Sender  : Frame 8 (seq 8) transmitted
+[t=  9.00] Receiver: Frame 6 (seq 6) is out of order (expected seq 3) -> discarded
+[t=  9.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t=  9.00] Sender  : Frame 9 (seq 9) transmitted
+[t=  9.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 10.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting outstanding frames 3..9 (go back to 3)
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 11.00] Receiver: Frame 8 (seq 8) is out of order (expected seq 3) -> discarded
+[t= 11.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 11.00] Sender  : Frame 4 (seq 4) retransmitted (attempt 2)
+[t= 11.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 12.00] Receiver: Frame 9 (seq 9) is out of order (expected seq 3) -> discarded
+[t= 12.00] Receiver: ACK 2 (seq 2) generated (re-ACK of last in-order frame 2)
+[t= 12.00] Sender  : Frame 5 (seq 5) retransmitted (attempt 2)
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully -> delivered
+[t= 13.00] Receiver: ACK 3 (seq 3) generated (cumulative: frames up to 3 received)
+[t= 13.00] Sender  : Frame 6 (seq 6) retransmitted (attempt 2)
+[t= 13.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 14.00] Receiver: Frame 4 (seq 4) received successfully -> delivered
+[t= 14.00] Receiver: ACK 4 (seq 4) generated (cumulative: frames up to 4 received)
+[t= 14.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 14.00] Sender  : ACK 2 (seq 2) received -> duplicate, ignored
+[t= 15.00] Receiver: Frame 5 (seq 5) received successfully -> delivered
+[t= 15.00] Receiver: ACK 5 (seq 5) generated (cumulative: frames up to 5 received)
+[t= 15.00] Sender  : Frame 8 (seq 8) retransmitted (attempt 2)
+[t= 15.00] Sender  : ACK 3 received (cumulative) -> frames 3..3 acknowledged
+[t= 16.00] Receiver: Frame 6 (seq 6) received successfully -> delivered
+[t= 16.00] Receiver: ACK 6 (seq 6) generated (cumulative: frames up to 6 received)
+[t= 16.00] Sender  : Frame 9 (seq 9) retransmitted (attempt 2)
+[t= 16.00] Sender  : ACK 4 received (cumulative) -> frames 4..4 acknowledged
+[t= 17.00] Receiver: Frame 7 (seq 7) received successfully -> delivered
+[t= 17.00] Receiver: ACK 7 (seq 7) generated (cumulative: frames up to 7 received)
+[t= 17.00] Sender  : ACK 5 received (cumulative) -> frames 5..5 acknowledged
+[t= 18.00] Receiver: Frame 8 (seq 8) received successfully -> delivered
+[t= 18.00] Receiver: ACK 8 (seq 8) generated (cumulative: frames up to 8 received)
+[t= 18.00] Sender  : ACK 6 received (cumulative) -> frames 6..6 acknowledged
+[t= 19.00] Receiver: Frame 9 (seq 9) received successfully -> delivered
+[t= 19.00] Receiver: ACK 9 (seq 9) generated (cumulative: frames up to 9 received)
+[t= 19.00] Sender  : ACK 7 received (cumulative) -> frames 7..7 acknowledged
+[t= 20.00] Sender  : ACK 8 received (cumulative) -> frames 8..8 acknowledged
+[t= 21.00] Sender  : ACK 9 received (cumulative) -> frames 9..9 acknowledged
+[t= 21.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Go-Back-N
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 17
+Total retransmissions         : 7
+Total frames discarded        : 5
+Data frames lost in channel   : 2
+ACKs generated / lost         : 15 / 0
+Timeouts                      : 1
+Total simulated time          : 21 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+------------------------------------------------------------------------------
+Test 6 | Selective Repeat | frames=10, m=4, Ws=8, Wr=8, lost frames=[3, 7], lost ACKs=-
+Note: m=4, largest legal SR window
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 10 | sequence bits: 4 (sequence numbers 0..15) | sender window: 8 | receiver window: 8
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = [3, 7], lost ACKs = none (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  3.00] Sender  : Frame 3 (seq 3) transmitted
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  4.00] Sender  : Frame 4 (seq 4) transmitted
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Sender  : Frame 5 (seq 5) transmitted
+[t=  5.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t=  5.00] Sender  : Window slides: base 0 -> 1
+[t=  6.00] Channel : Frame 3 LOST in transit (never reaches the receiver)
+[t=  6.00] Sender  : Frame 6 (seq 6) transmitted
+[t=  6.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t=  6.00] Sender  : Window slides: base 1 -> 2
+[t=  7.00] Sender  : Frame 7 (seq 7) transmitted
+[t=  7.00] Receiver: Frame 4 (seq 4) received out of order -> buffered (receiver window 3..10)
+[t=  7.00] Receiver: ACK 4 (seq 4) generated
+[t=  7.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t=  7.00] Sender  : Window slides: base 2 -> 3
+[t=  8.00] Sender  : Frame 8 (seq 8) transmitted
+[t=  8.00] Receiver: Frame 5 (seq 5) received out of order -> buffered (receiver window 3..10)
+[t=  8.00] Receiver: ACK 5 (seq 5) generated
+[t=  9.00] Sender  : Frame 9 (seq 9) transmitted
+[t=  9.00] Receiver: Frame 6 (seq 6) received out of order -> buffered (receiver window 3..10)
+[t=  9.00] Receiver: ACK 6 (seq 6) generated
+[t=  9.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 10.00] Sender  : Timeout occurred for frame 3 -> frame loss detected
+[t= 10.00] Sender  : Retransmitting only frame 3
+[t= 10.00] Sender  : Frame 3 (seq 3) retransmitted (attempt 2)
+[t= 10.00] Channel : Frame 7 LOST in transit (never reaches the receiver)
+[t= 10.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 11.00] Receiver: Frame 8 (seq 8) received out of order -> buffered (receiver window 3..10)
+[t= 11.00] Receiver: ACK 8 (seq 8) generated
+[t= 11.00] Sender  : ACK 6 received -> frame 6 acknowledged
+[t= 12.00] Receiver: Frame 9 (seq 9) received out of order -> buffered (receiver window 3..10)
+[t= 12.00] Receiver: ACK 9 (seq 9) generated
+[t= 13.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 13.00] Receiver: ACK 3 (seq 3) generated
+[t= 13.00] Receiver: Delivered frame(s) 3..6 to the upper layer in order; receiver window slides to base 7
+[t= 13.00] Sender  : ACK 8 received -> frame 8 acknowledged
+[t= 14.00] Sender  : Timeout occurred for frame 7 -> frame loss detected
+[t= 14.00] Sender  : Retransmitting only frame 7
+[t= 14.00] Sender  : Frame 7 (seq 7) retransmitted (attempt 2)
+[t= 14.00] Sender  : ACK 9 received -> frame 9 acknowledged
+[t= 15.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 15.00] Sender  : Window slides: base 3 -> 7
+[t= 17.00] Receiver: Frame 7 (seq 7) received successfully (in order)
+[t= 17.00] Receiver: ACK 7 (seq 7) generated
+[t= 17.00] Receiver: Delivered frame(s) 7..9 to the upper layer in order; receiver window slides to base 10
+[t= 19.00] Sender  : ACK 7 received -> frame 7 acknowledged
+[t= 19.00] Sender  : Window slides: base 7 -> 10
+[t= 19.00] Sender  : All 10 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 10 / 10
+Total transmission attempts   : 12
+Total retransmissions         : 2
+Total frames discarded        : 0
+Data frames lost in channel   : 2
+ACKs generated / lost         : 10 / 0
+Timeouts                      : 2
+Total simulated time          : 19 time units
+Delivery check                : PASSED (all frames delivered once, in order)
+
+##############################################################################
+# Test 7 - Invalid configurations
+# The simulator must reject each of these before any transmission starts.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 7 | Selective Repeat | frames=10, m=3, Ws=5, Wr=5, lost frames=-, lost ACKs=-
+Note: SR window 5 > 2^(m-1) = 4
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Selective Repeat sender window must be between 1 and 2^(m-1) = 4 (got 5 with m = 3).
+  - Selective Repeat receiver window must be between 1 and 2^(m-1) = 4 (got 5 with m = 3).
+
+------------------------------------------------------------------------------
+Test 7 | Selective Repeat | frames=10, m=3, Ws=4, Wr=5, lost frames=-, lost ACKs=-
+Note: SR receiver window 5 > 2^(m-1) = 4
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Selective Repeat receiver window must be between 1 and 2^(m-1) = 4 (got 5 with m = 3).
+
+------------------------------------------------------------------------------
+Test 7 | Go-Back-N | frames=10, m=3, Ws=8, Wr=1, lost frames=-, lost ACKs=-
+Note: GBN window 8 > 2^m - 1 = 7
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Go-Back-N sender window must be between 1 and 2^m - 1 = 7 (got 8 with m = 3).
+
+------------------------------------------------------------------------------
+Test 7 | Go-Back-N | frames=10, m=3, Ws=4, Wr=2, lost frames=-, lost ACKs=-
+Note: GBN receiver window must be 1
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Go-Back-N requires a receiver window of 1 (got 2).
+
+------------------------------------------------------------------------------
+Test 7 | Stop-and-Wait | frames=10, m=3, Ws=2, Wr=1, lost frames=-, lost ACKs=-
+Note: Stop-and-Wait window must be 1
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Stop-and-Wait requires a sender window of 1 (got 2).
+
+------------------------------------------------------------------------------
+Test 7 | Selective Repeat | frames=0, m=3, Ws=2, Wr=2, lost frames=-, lost ACKs=-
+Note: zero frames
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Total number of frames must be at least 1.
+
+------------------------------------------------------------------------------
+Test 7 | Go-Back-N | frames=10, m=0, Ws=1, Wr=1, lost frames=-, lost ACKs=-
+Note: zero sequence bits
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Number of sequence bits must be between 1 and 16.
+
+------------------------------------------------------------------------------
+Test 7 | Go-Back-N | frames=10, m=3, Ws=4, Wr=1, lost frames=[12], lost ACKs=[15]
+Note: lost frame / ACK numbers out of range
+------------------------------------------------------------------------------
+INVALID CONFIGURATION - simulation not started:
+  - Lost frame number 12 is outside the range 0..9.
+  - Lost ACK number 15 is outside the range 0..9.
+
+##############################################################################
+# Test 7b - Why the window must be limited (demonstration)
+# With m = 2 and ACKs 0-2 lost, an oversized SR window makes the receiver accept an old retransmission as a brand-new frame (sequence-number ambiguity). The legal window does not.
+##############################################################################
+
+------------------------------------------------------------------------------
+Test 7b | Selective Repeat | frames=6, m=2, Ws=3, Wr=3, lost frames=-, lost ACKs=[0, 1, 2]
+Note: UNSAFE: m=2, SR window 3 > 2^(m-1) = 2, window check bypassed with --unsafe
+------------------------------------------------------------------------------
+Warning: (unsafe mode, not enforced) Selective Repeat sender window must be between 1 and 2^(m-1) = 2 (got 3 with m = 2).
+Warning: (unsafe mode, not enforced) Selective Repeat receiver window must be between 1 and 2^(m-1) = 2 (got 3 with m = 2).
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 6 | sequence bits: 2 (sequence numbers 0..3) | sender window: 3 | receiver window: 3
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [0, 1, 2] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  2.00] Sender  : Frame 2 (seq 2) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t=  5.00] Receiver: ACK 2 (seq 2) generated
+[t=  5.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t=  5.00] Channel : ACK 0 LOST in transit (never reaches the sender)
+[t=  6.00] Channel : ACK 1 LOST in transit (never reaches the sender)
+[t=  7.00] Sender  : Timeout occurred for frame 0 -> frame loss detected
+[t=  7.00] Sender  : Retransmitting only frame 0
+[t=  7.00] Sender  : Frame 0 (seq 0) retransmitted (attempt 2)
+[t=  7.00] Channel : ACK 2 LOST in transit (never reaches the sender)
+[t=  8.00] Sender  : Timeout occurred for frame 1 -> frame loss detected
+[t=  8.00] Sender  : Retransmitting only frame 1
+[t=  8.00] Sender  : Frame 1 (seq 1) retransmitted (attempt 2)
+[t=  9.00] Sender  : Timeout occurred for frame 2 -> frame loss detected
+[t=  9.00] Sender  : Retransmitting only frame 2
+[t=  9.00] Sender  : Frame 2 (seq 2) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 0 (seq 0) received out of order -> buffered (receiver window 3..5)
+[t= 10.00] Receiver: ACK 0 (seq 0) generated
+[t= 11.00] Receiver: Frame 1 (seq 1) received out of order -> buffered (receiver window 3..5)
+[t= 11.00] Receiver: ACK 1 (seq 1) generated
+[t= 12.00] Receiver: Frame 2 (seq 2) was already delivered -> duplicate discarded
+[t= 12.00] Receiver: ACK 2 (seq 2) generated (re-ACK, the earlier ACK was probably lost)
+[t= 12.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t= 12.00] Sender  : Window slides: base 0 -> 1
+[t= 12.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 13.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 13.00] Sender  : Window slides: base 1 -> 2
+[t= 13.00] Sender  : Frame 4 (seq 0) transmitted
+[t= 14.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 14.00] Sender  : Window slides: base 2 -> 3
+[t= 14.00] Sender  : Frame 5 (seq 1) transmitted
+[t= 15.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 15.00] Receiver: ACK 3 (seq 3) generated
+[t= 15.00] Receiver: !! ERROR: delivered frame 0 but frame 4 was expected (sequence-number ambiguity)
+[t= 15.00] Receiver: !! ERROR: delivered frame 1 but frame 5 was expected (sequence-number ambiguity)
+[t= 15.00] Receiver: Delivered frame(s) 3..5 to the upper layer in order; receiver window slides to base 6
+[t= 16.00] Receiver: Frame 4 (seq 0) received out of order -> buffered (receiver window 6..8)
+[t= 16.00] Receiver: ACK 4 (seq 0) generated
+[t= 17.00] Receiver: Frame 5 (seq 1) was already delivered -> duplicate discarded
+[t= 17.00] Receiver: ACK 5 (seq 1) generated (re-ACK, the earlier ACK was probably lost)
+[t= 17.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 17.00] Sender  : Window slides: base 3 -> 4
+[t= 18.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 18.00] Sender  : Window slides: base 4 -> 5
+[t= 19.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 19.00] Sender  : Window slides: base 5 -> 6
+[t= 19.00] Sender  : All 6 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 6 / 6
+Total transmission attempts   : 9
+Total retransmissions         : 3
+Total frames discarded        : 2
+Data frames lost in channel   : 0
+ACKs generated / lost         : 9 / 3
+Timeouts                      : 3
+Total simulated time          : 19 time units
+Delivery check                : FAILED
+
+------------------------------------------------------------------------------
+Test 7b | Selective Repeat | frames=6, m=2, Ws=2, Wr=2, lost frames=-, lost ACKs=[0, 1, 2]
+Note: same channel errors with the legal window 2 = 2^(m-1)
+------------------------------------------------------------------------------
+========== TRANSMISSION LOG ==========
+Protocol: Selective Repeat
+Frames: 6 | sequence bits: 2 (sequence numbers 0..3) | sender window: 2 | receiver window: 2
+Timing (time units): frame transmission = 1, one-way propagation = 2, timeout = 6 (counted from end of frame transmission)
+Channel errors: lost frames = none, lost ACKs = [0, 1, 2] (each loss hits the first transmission only)
+
+[t=  0.00] Sender  : Frame 0 (seq 0) transmitted
+[t=  1.00] Sender  : Frame 1 (seq 1) transmitted
+[t=  3.00] Receiver: Frame 0 (seq 0) received successfully (in order)
+[t=  3.00] Receiver: ACK 0 (seq 0) generated
+[t=  3.00] Receiver: Delivered frame(s) 0 to the upper layer in order; receiver window slides to base 1
+[t=  4.00] Receiver: Frame 1 (seq 1) received successfully (in order)
+[t=  4.00] Receiver: ACK 1 (seq 1) generated
+[t=  4.00] Receiver: Delivered frame(s) 1 to the upper layer in order; receiver window slides to base 2
+[t=  5.00] Channel : ACK 0 LOST in transit (never reaches the sender)
+[t=  6.00] Channel : ACK 1 LOST in transit (never reaches the sender)
+[t=  7.00] Sender  : Timeout occurred for frame 0 -> frame loss detected
+[t=  7.00] Sender  : Retransmitting only frame 0
+[t=  7.00] Sender  : Frame 0 (seq 0) retransmitted (attempt 2)
+[t=  8.00] Sender  : Timeout occurred for frame 1 -> frame loss detected
+[t=  8.00] Sender  : Retransmitting only frame 1
+[t=  8.00] Sender  : Frame 1 (seq 1) retransmitted (attempt 2)
+[t= 10.00] Receiver: Frame 0 (seq 0) was already delivered -> duplicate discarded
+[t= 10.00] Receiver: ACK 0 (seq 0) generated (re-ACK, the earlier ACK was probably lost)
+[t= 11.00] Receiver: Frame 1 (seq 1) was already delivered -> duplicate discarded
+[t= 11.00] Receiver: ACK 1 (seq 1) generated (re-ACK, the earlier ACK was probably lost)
+[t= 12.00] Sender  : ACK 0 received -> frame 0 acknowledged
+[t= 12.00] Sender  : Window slides: base 0 -> 1
+[t= 12.00] Sender  : Frame 2 (seq 2) transmitted
+[t= 13.00] Sender  : ACK 1 received -> frame 1 acknowledged
+[t= 13.00] Sender  : Window slides: base 1 -> 2
+[t= 13.00] Sender  : Frame 3 (seq 3) transmitted
+[t= 15.00] Receiver: Frame 2 (seq 2) received successfully (in order)
+[t= 15.00] Receiver: ACK 2 (seq 2) generated
+[t= 15.00] Receiver: Delivered frame(s) 2 to the upper layer in order; receiver window slides to base 3
+[t= 16.00] Receiver: Frame 3 (seq 3) received successfully (in order)
+[t= 16.00] Receiver: ACK 3 (seq 3) generated
+[t= 16.00] Receiver: Delivered frame(s) 3 to the upper layer in order; receiver window slides to base 4
+[t= 17.00] Channel : ACK 2 LOST in transit (never reaches the sender)
+[t= 18.00] Sender  : ACK 3 received -> frame 3 acknowledged
+[t= 19.00] Sender  : Timeout occurred for frame 2 -> frame loss detected
+[t= 19.00] Sender  : Retransmitting only frame 2
+[t= 19.00] Sender  : Frame 2 (seq 2) retransmitted (attempt 2)
+[t= 22.00] Receiver: Frame 2 (seq 2) was already delivered -> duplicate discarded
+[t= 22.00] Receiver: ACK 2 (seq 2) generated (re-ACK, the earlier ACK was probably lost)
+[t= 24.00] Sender  : ACK 2 received -> frame 2 acknowledged
+[t= 24.00] Sender  : Window slides: base 2 -> 4
+[t= 24.00] Sender  : Frame 4 (seq 0) transmitted
+[t= 25.00] Sender  : Frame 5 (seq 1) transmitted
+[t= 27.00] Receiver: Frame 4 (seq 0) received successfully (in order)
+[t= 27.00] Receiver: ACK 4 (seq 0) generated
+[t= 27.00] Receiver: Delivered frame(s) 4 to the upper layer in order; receiver window slides to base 5
+[t= 28.00] Receiver: Frame 5 (seq 1) received successfully (in order)
+[t= 28.00] Receiver: ACK 5 (seq 1) generated
+[t= 28.00] Receiver: Delivered frame(s) 5 to the upper layer in order; receiver window slides to base 6
+[t= 29.00] Sender  : ACK 4 received -> frame 4 acknowledged
+[t= 29.00] Sender  : Window slides: base 4 -> 5
+[t= 30.00] Sender  : ACK 5 received -> frame 5 acknowledged
+[t= 30.00] Sender  : Window slides: base 5 -> 6
+[t= 30.00] Sender  : All 6 frames acknowledged - transmission complete
+
+========== PERFORMANCE SUMMARY ==========
+Protocol                      : Selective Repeat
+Successfully delivered frames : 6 / 6
+Total transmission attempts   : 9
+Total retransmissions         : 3
+Total frames discarded        : 3
+Data frames lost in channel   : 0
+ACKs generated / lost         : 9 / 3
+Timeouts                      : 3
+Total simulated time          : 30 time units
+Delivery check                : PASSED (all frames delivered once, in order)
